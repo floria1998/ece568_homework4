@@ -35,5 +35,5 @@ int updateTranEXEOnly(const string &id, int exe_id, connection *C);
 int updateTranEXEandOpen(const string &id, const string &exe_id, connection *C);
 int payBackBuyer(int id, double toadd, connection *C);
 int cancel(string &id, connection *C);
-
+int updateTranCancel(const string &id, int cancel_id, connection *C);
 #endif // MAIN_CPP_STOCK_H

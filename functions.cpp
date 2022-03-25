@@ -191,6 +191,17 @@ int updateTranEXEOnly(const string &id, int exe_id, connection *C) {
   return 1;
 }
 
+int updateTranCancel(const string &id, int cancel_id, connection *C) {
+  work W(*C);
+  stringstream sql;
+
+  sql << "UPDATE TRANSACTION_TB SET CANCEL_ID =" << cancel_id
+      << " WHERE TRANSACTION_ID=" << id << ";";
+  W.exec(sql.str());
+  W.commit();
+  return 1;
+}
+
 int updateTranEXEandOpen(const string &id, const string &exe_id,
                          connection *C) {
   work W(*C);
@@ -528,13 +539,14 @@ int cancel(string &id, connection *C) {
          "TRANSACTION_ID="
       << id << ";";
   result R(W.exec(sql));
+  W.commit();
   int open_id = R[0]["OPEN_ID"].as<int>();
   int account_id = R[0]["ACCOUNT_ID"].as<int>();
   int type = R[0]["TRAN_TYPE"].as<int>();
   int amount = R[0]["AMOUNT"].as<int>();
   string symbol = R[0]["SYMBOL"].as<string>();
   double price = R[0]["PRICE"].as<double>();
-  /*
+
   deleteFromOpen(to_string(open_id), C);
 
   if (type == 1) {
@@ -545,13 +557,26 @@ int cancel(string &id, connection *C) {
     createPosition(to_string(account_id), symbol, amount, C);
   }
 
+  work W2(*C);
   time_t curr_time = time(NULL);
   stringstream sql2;
   sql2 << "INSERT INTO CANCEL_TB (ACCOUNT_ID,AMOUNT,CANCEL_TIME) VALUES ("
-       << W.quote(account_id) << ", " << W.quote(amount) << ", "
-       << W.quote(curr_time) << ";";
-  W.exec(sql2);
-  */
-  W.commit();
+       << W.quote(to_string(account_id)) << ", " << W.quote(to_string(amount))
+       << ", " << W.quote(to_string(curr_time)) << ");";
+  W2.exec(sql2);
+
+  W2.commit();
+
+  work W3(*C);
+  stringstream sql3;
+  sql3 << "SELECT CANCEL_ID FROM CANCEL_TB WHERE CANCEL_TIME=" << curr_time
+       << ";";
+  result R3(W3.exec(sql3));
+  W3.commit();
+
+  int cancel_id = R3[0]["CANCEL_ID"].as<int>();
+
+  updateTranCancel(id, cancel_id, C);
+
   return 1;
 }
