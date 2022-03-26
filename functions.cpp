@@ -214,10 +214,11 @@ int updateTranEXEandOpen(const string &id, const string &exe_id,
   return 1;
 }
 
-int updateAccount(const string &id, double price, int amount, connection *C) {
+int updateAccount(const string &id, double balance, double price, int amount,
+                  connection *C) {
   work W(*C);
   stringstream sql;
-  double new_balance = price * amount;
+  double new_balance = balance + price * amount;
 
   sql << "UPDATE USER_TB SET BALANCE =" << W.quote(to_string(new_balance))
       << " WHERE ACCOUNT_ID=" << id << ";";
@@ -241,8 +242,10 @@ int createOpen(string id, double price, int amount, string symbol, int type,
       double remain = balance - deduct;
       work W4(*C);
       stringstream sql_deduct;
+      cout << "beign" << endl;
       sql_deduct << "UPDATE USER_TB SET BALANCE=" << W4.quote(to_string(remain))
                  << " WHERE ACCOUNT_ID=" << id << ";";
+      cout << "minus " << deduct << " from buyer account " << id << endl;
       W4.exec(sql_deduct.str());
       W4.commit();
     } else {
@@ -322,11 +325,13 @@ bool matchOneOrder(connection *C, const string &tran_id) {
   int open_id = R[0]["OPEN_ID"].as<int>();
   // get the information of the account that should be matched
   stringstream sql2;
-  sql2 << "SELECT ACCOUNT_ID,AMOUNT,PRICE,SYMBOL,TRAN_TYPE,OPEN_TIME FROM "
-          "OPEN_TB "
-          "WHERE OPEN_ID="
+  sql2 << "SELECT BALANCE, "
+          "OPEN_TB.ACCOUNT_ID,AMOUNT,PRICE,SYMBOL,TRAN_TYPE,OPEN_TIME FROM "
+          "OPEN_TB, USER_TB "
+          "WHERE OPEN_TB.ACCOUNT_ID=USER_TB.ACCOUNT_ID AND OPEN_ID="
        << open_id << ";";
   result R2(W.exec(sql2.str()));
+  double balance = R2[0]["BALANCE"].as<double>();
   int account_id = R2[0]["ACCOUNT_ID"].as<int>();
   double price = R2[0]["PRICE"].as<double>();
   int amount = R2[0]["AMOUNT"].as<int>();
@@ -337,12 +342,14 @@ bool matchOneOrder(connection *C, const string &tran_id) {
   if (type == 1) {
     stringstream sql3;
     sql3 << "SELECT "
-            "OPEN_TB.OPEN_ID,OPEN_TB.ACCOUNT_ID,PRICE,SYMBOL,AMOUNT,OPEN_TIME,"
+            "BALANCE,OPEN_TB.OPEN_ID,OPEN_TB.ACCOUNT_ID,PRICE,SYMBOL,AMOUNT,"
+            "OPEN_TIME,"
             "TRAN_TYPE,"
             "TRANSACTION_ID FROM "
-            "OPEN_TB, TRANSACTION_TB WHERE "
+            "OPEN_TB, TRANSACTION_TB, USER_TB WHERE "
             "TRANSACTION_TB.OPEN_ID=OPEN_TB.OPEN_ID AND "
-            "ACCOUNT_ID !="
+            "USER_TB.ACCOUNT_ID=OPEN_TB.ACCOUNT_ID AND "
+            "OPEN_TB.ACCOUNT_ID !="
          << account_id << " AND TRAN_TYPE=" << 2 << " AND PRICE<" << price
          << " AND SYMBOL=" << W.quote(symbol) << " ORDER BY PRICE ASC;";
     result R3(W.exec(sql3.str()));
@@ -354,6 +361,7 @@ bool matchOneOrder(connection *C, const string &tran_id) {
     W.commit();
     // all the orders that match
     for (result::const_iterator k = R3.begin(); k != R3.end(); k++) {
+      double sell_balance = k["BALANCE"].as<double>();
       int sell_open_id = k["OPEN_ID"].as<int>();
       int sell_transaction_id = k["TRANSACTION_ID"].as<int>();
       int sell_account_id = k["ACCOUNT_ID"].as<int>();
@@ -366,7 +374,8 @@ bool matchOneOrder(connection *C, const string &tran_id) {
       if (amount < sell_amount) {
         int remain = sell_amount - amount;
         // update seller account;
-        updateAccount(to_string(sell_account_id), tran_price, amount, C);
+        updateAccount(to_string(sell_account_id), sell_balance, tran_price,
+                      amount, C);
         // update buyer account
         createPosition(to_string(account_id), symbol, amount, C);
         if (tran_price < price) {
@@ -391,7 +400,8 @@ bool matchOneOrder(connection *C, const string &tran_id) {
       } else if (amount > sell_amount) {
         amount = amount - sell_amount;
         // update the seller account, buyer account
-        updateAccount(to_string(sell_account_id), tran_price, sell_amount, C);
+        updateAccount(to_string(sell_account_id), sell_balance, tran_price,
+                      sell_amount, C);
         createPosition(to_string(account_id), symbol, sell_amount, C);
         if (tran_price < price) {
           double difPirce = price - tran_price;
@@ -413,7 +423,8 @@ bool matchOneOrder(connection *C, const string &tran_id) {
         continue;
         // update the transaction table, set buyer's executed_id
       } else {
-        updateAccount(to_string(sell_account_id), tran_price, amount, C);
+        updateAccount(to_string(sell_account_id), sell_balance, tran_price,
+                      amount, C);
         createPosition(to_string(account_id), symbol, amount, C);
         if (tran_price < price) {
           double difPirce = price - tran_price;
@@ -431,14 +442,17 @@ bool matchOneOrder(connection *C, const string &tran_id) {
       }
     }
   }
+
   // the order is sell order
   else {
     amount = -amount;
     stringstream sql3;
     // select all the buy orders that match
-    sql3 << "SELECT OPEN_ID,ACCOUNT_ID,PRICE,AMOUNT,TIME, TRANSACTION_ID FROM "
-            "OPEN_TB, TRANSACTION_TB WHERE "
-            "TRANSACTION_TB.OPEN_ID=OPEN_TB.OPEN_ID AND "
+    sql3 << "SELECT OPEN_ID,BALANCE,ACCOUNT_ID,PRICE,AMOUNT,TIME, "
+            "TRANSACTION_ID FROM "
+            "OPEN_TB, TRANSACTION_TB,USER_TB WHERE "
+            "TRANSACTION_TB.OPEN_ID=OPEN_TB.OPEN_ID "
+            "USER_TB.ACCOUNT_ID=OPEN_TB.ACCOUNT_ID AND "
             "ACCOUNT_ID !="
          << account_id << " AND TRAN_TYPE=" << 1 << " AND PRICE>" << price
          << " AND SYMBOL=" << W.quote(symbol) << " ORDER BY PRICE DESC;";
@@ -449,6 +463,7 @@ bool matchOneOrder(connection *C, const string &tran_id) {
     }
     // iterate through all the buy orders
     for (result::const_iterator k = R3.begin(); k != R3.begin(); k++) {
+      double sell_balance = k["BALANCE"].as<int>();
       int sell_open_id = k["OPEN_ID"].as<int>();
       int sell_transaction_id = k["TRANSACTION_ID"].as<int>();
       int sell_account_id = k["ACCOUNT_ID"].as<int>();
@@ -462,7 +477,8 @@ bool matchOneOrder(connection *C, const string &tran_id) {
       if (amount < sell_amount) {
         int remain = sell_amount - amount;
         // update seller account;
-        updateAccount(to_string(sell_account_id), tran_price, amount, C);
+        updateAccount(to_string(sell_account_id), sell_balance, tran_price,
+                      amount, C);
         // update buyer account
         createPosition(to_string(account_id), symbol, amount, C);
         if (tran_price < price) {
@@ -487,7 +503,8 @@ bool matchOneOrder(connection *C, const string &tran_id) {
       } else if (amount > sell_amount) {
         amount = amount - sell_amount;
         // update the seller account, buyer account
-        updateAccount(to_string(sell_account_id), tran_price, sell_amount, C);
+        updateAccount(to_string(sell_account_id), sell_balance, tran_price,
+                      sell_amount, C);
         createPosition(to_string(account_id), symbol, sell_amount, C);
         if (tran_price < price) {
           double difPirce = price - tran_price;
@@ -509,7 +526,8 @@ bool matchOneOrder(connection *C, const string &tran_id) {
         continue;
         // update the transaction table, set buyer's executed_id
       } else {
-        updateAccount(to_string(sell_account_id), tran_price, amount, C);
+        updateAccount(to_string(sell_account_id), sell_balance, tran_price,
+                      amount, C);
         createPosition(to_string(account_id), symbol, amount, C);
         if (tran_price < price) {
           double difPirce = price - tran_price;

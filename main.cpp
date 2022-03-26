@@ -31,33 +31,22 @@ int main(int argc, char *argv[]) {
   dropTable(C, "EXECUTED_TB");
   dropTable(C, "CANCEL_TB");
   createTable(C, "createTable.sql");
-  double balance1 = 200;
-  string id1 = "1234";
-  double balance2 = 300;
-  string id2 = "2345";
-  createAccount(balance1, id1, C);
-  createAccount(balance2, id2, C);
-  string symbol = "BOA";
-  int amount = 100;
-  createPosition(id1, symbol, amount, C);
-  int add = 200;
-  createPosition(id1, symbol, add, C);
-  createPosition(id2, symbol, 300, C);
-  double price = 10.1;
-  int amount1 = 1;
-  int type = 1;
-  createOpen(id1, price, amount1, symbol, type, C);
+
+  createAccount(200, "1234", C);
+  createAccount(300, "2345", C);
+
+  createPosition("1234", "BOA", 100, C);
+  createPosition("2345", "BOA", 100, C);
+
+  createOpen("1234", 13, 2, "BOA", 1, C);
   sleep(2);
-  double price2 = 22;
-  int amount2 = -2;
-  int type2 = 2;
-  createOpen(id1, price2, amount2, symbol, type2, C);
+  createOpen("1234", 21, -2, "BOA", 2, C);
   sleep(2);
-  double price3 = 23;
-  int amount3 = 10;
-  createOpen(id2, price3, amount3, symbol, type, C);
-  string tran_id = "3";
-  matchOneOrder(C, tran_id);
-  string open1 = "1";
-  cancel(open1, C);
+  createOpen("2345", 23, 10, "BOA", 1, C);
+  sleep(2);
+  createOpen("1234", 22, -12, "BOA", 2, C);
+
+  matchOneOrder(C, "3");
+  // string open1 = "1";
+  // cancel(open1, C);
 }
