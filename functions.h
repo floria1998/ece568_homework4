@@ -24,7 +24,7 @@ public:
   int createAccount(double balance, string id, connection *C);
   int createPosition(const string &id, const string &symbol, int amount,
                      connection *C);
-  //<<<<<<< HEAD
+
   int updateAccount(const string &id, double balance, double price, int amount,
                     connection *C);
   int createOpen(string id, double price, int amount, string symbol, int type,
@@ -37,20 +37,6 @@ public:
                            connection *C);
   int payBackBuyer(int id, double toadd, connection *C);
   int cancel(string &id, connection *C);
-  // int updateTranCancel(string &id,int cancel_id,connection *C);
-  //=======
-  // int updateAccount(string id, double price, int amount, connection *C);
-  // int createOpen(string id, double price, int amount, string symbol, int
-  // type,
-  //               connection *C);//1 buy 2 sell
-  //  bool matchOneOrder(connection *C, const string &tran_id);
-  //  int updateOpenAmount(const string &id, int new_amount, connection *C);
-  // int updateTranEXEOnly(const string &id, int exe_id, connection *C);
-  // int updateTranEXEandOpen(const string &id, const string &exe_id, connection
-  // *C);
-  //  int payBackBuyer(int id, double toadd, connection *C);
-  //  int cancel(string &id, connection *C);
-  //  void updateTranCancel(string & id, string cancel_id,connection *C);
   response queryDB(string user_id, string tran_id2, connection *C);
 };
 

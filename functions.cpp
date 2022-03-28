@@ -1,23 +1,20 @@
 #include <fstream>
 #include <ios>
 #include <iostream>
-#include <pqxx/connection.hxx>
-#include <pqxx/nontransaction.hxx>
 #include <pqxx/pqxx>
 #include <string>
 #include <type_traits>
+#include "functions.h"
+
 using namespace std;
 using namespace pqxx;
 
-void openDatabase(connection *C) {
-  // Allocate & initialize a Postgres connection object
 
+void database::openDatabase(connection **C) {
   try {
-    // Establish a connection to the database
-    // Parameters: database name, user name, user password
-    C = new connection("dbname=postgresBase user=postgres password=passw0rd");
-    if (C->is_open()) {
-      cout << "Opened database successfully: " << C->dbname() << endl;
+    *C = new connection("dbname=postgresbase user=postgres password=passw0rd");
+    if ((*C)->is_open()) {
+      cout << "Opened database successfully: " << (*C)->dbname() << endl;
     } else {
       cout << "Can't open database" << endl;
       return;
@@ -28,7 +25,7 @@ void openDatabase(connection *C) {
   }
 }
 
-void createTable(connection *C, string file) {
+void database::createTable(connection *C, string file) {
   const char *fileName = file.c_str();
   ifstream thefile(fileName);
   string query, line;
@@ -47,14 +44,15 @@ void createTable(connection *C, string file) {
   return;
 }
 
-void dropTable(connection *C, string table) {
+void database::dropTable(connection *C, string table) {
   string que = "DROP TABLE IF EXISTS " + table + " CASCADE;";
+  cout<<table<<endl;
   work W(*C);
   W.exec(que);
   W.commit();
 }
 
-bool checkAccountExist(const string &id, connection *C) {
+bool database::checkAccountExist(const string &id, connection *C) {
   work W(*C);
   string sql = "SELECT * FROM USER_TB WHERE ACCOUNT_ID=" + id + ";";
   result R(W.exec(sql));
@@ -67,7 +65,7 @@ bool checkAccountExist(const string &id, connection *C) {
   }
 }
 
-int deleteFromOpen(const string &id, connection *C) {
+int database::deleteFromOpen(const string &id, connection *C) {
   work W(*C);
   stringstream sql;
   sql << "DELETE FROM OPEN_TB WHERE OPEN_ID=" << W.quote(id) << ";";
@@ -76,7 +74,7 @@ int deleteFromOpen(const string &id, connection *C) {
   return 1;
 }
 
-int addToExecuted(const string &buyer_id, const string &seller_id, double price,
+int database::addToExecuted(const string &buyer_id, const string &seller_id, double price,
                   int amount, string symbol, connection *C) {
   work W(*C);
   stringstream sql;
@@ -99,8 +97,7 @@ int addToExecuted(const string &buyer_id, const string &seller_id, double price,
   return executed_id;
 }
 
-int updateOpenAmount(const string &open_id, const string &id, int new_amount,
-                     connection *C) {
+int database::updateOpenAmount(const string &open_id, const string &id, int new_amount,connection *C) {
   work W(*C);
   stringstream sql;
   sql << "UPDATE OPEN_TB SET AMOUNT =" << W.quote(new_amount)
@@ -111,7 +108,7 @@ int updateOpenAmount(const string &open_id, const string &id, int new_amount,
   return 1;
 }
 
-int payBackBuyer(int id, double toadd, connection *C) {
+int database::payBackBuyer(int id, double toadd, connection *C) {
   work W(*C);
   stringstream sql1;
   sql1 << "SELECT BALANCE FROM USER_TB WHERE ACCOUNT_ID=" << id << ";";
@@ -126,7 +123,7 @@ int payBackBuyer(int id, double toadd, connection *C) {
   return 1;
 }
 
-int createAccount(double balance, string id, connection *C) {
+int database::createAccount(double balance, string id, connection *C) {
   bool exist = checkAccountExist(id, C);
   if (exist == true) {
     return 0;
@@ -140,8 +137,7 @@ int createAccount(double balance, string id, connection *C) {
   W.commit();
   return 1;
 }
-/*
-int checkPositionExist(string &id, connection *C, string symbol) {
+/* checkPositionExist(string &id, connection *C, string symbol) {
   nontransaction N(*C);
   string sql = "SELECT * FROM POSITION WHERE ACCOUNT_ID=" + N.quote(id) +
                " AND SYMBOL=" + N.quote(symbol) + ";";
@@ -149,8 +145,7 @@ int checkPositionExist(string &id, connection *C, string symbol) {
   return R.size();
 }
 */
-int createPosition(const string &id, const string &symbol, int amount,
-                   connection *C) {
+int database::createPosition(const string &id, const string &symbol, int amount,connection *C) {
   bool account_exist = checkAccountExist(id, C);
   if (account_exist == false) {
     return 0;
@@ -182,7 +177,7 @@ int createPosition(const string &id, const string &symbol, int amount,
   }
 }
 
-int updateTranEXEOnly(const string &id, int exe_id, connection *C) {
+int database::updateTranEXEOnly(const string &id, int exe_id, connection *C) {
   work W(*C);
   stringstream sql;
 
@@ -204,8 +199,7 @@ int updateTranCancel(const string &id, int cancel_id, connection *C) {
   return 1;
 }
 
-int updateTranEXEandOpen(const string &id, const string &exe_id,
-                         connection *C) {
+int database::updateTranEXEandOpen(const string &id, const string &exe_id,connection *C) {
   work W(*C);
   stringstream sql;
 
@@ -216,9 +210,9 @@ int updateTranEXEandOpen(const string &id, const string &exe_id,
   return 1;
 }
 
-int updateAccount(const string &id, double balance, double price, int amount,
-                  connection *C) {
-  work W(*C);
+
+int database::updateAccount(const string &id, double balance, double price, int amount, connection *C) {
+  work W(*C);	       
   stringstream sql;
   double new_balance = balance + price * amount;
 
@@ -229,7 +223,7 @@ int updateAccount(const string &id, double balance, double price, int amount,
   return new_balance;
 }
 
-int createOpen(string id, double price, int amount, string symbol, int type,
+int database::createOpen(string id, double price, int amount, string symbol, int type,
                connection *C) {
   // place the buyer's order
   if (type == 1) {
@@ -315,7 +309,7 @@ int createOpen(string id, double price, int amount, string symbol, int type,
 }
 
 // match a transaction
-bool matchOneOrder(connection *C, const string &tran_id) {
+bool database::matchOneOrder(connection *C, const string &tran_id) {
   work W(*C);
 
   stringstream sql1;
@@ -561,7 +555,8 @@ bool matchOneOrder(connection *C, const string &tran_id) {
   return 1;
 }
 
-int cancel(string &id, connection *C) {
+
+int database::cancel(string &id, connection *C) {
   work W(*C);
   stringstream sql;
   sql << "SELECT OPEN_TB.OPEN_ID,SYMBOL,ACCOUNT_ID,TRAN_TYPE,AMOUNT,PRICE FROM "
@@ -577,7 +572,11 @@ int cancel(string &id, connection *C) {
   int amount = R[0]["AMOUNT"].as<int>();
   string symbol = R[0]["SYMBOL"].as<string>();
   double price = R[0]["PRICE"].as<double>();
+  //<<<<<<< HEAD
 
+  //=======
+  
+  //>>>>>>> parser
   deleteFromOpen(to_string(open_id), C);
 
   if (type == 1) {
@@ -592,22 +591,120 @@ int cancel(string &id, connection *C) {
   time_t curr_time = time(NULL);
   stringstream sql2;
   sql2 << "INSERT INTO CANCEL_TB (ACCOUNT_ID,AMOUNT,CANCEL_TIME) VALUES ("
+ 
        << W.quote(to_string(account_id)) << ", " << W.quote(to_string(amount))
        << ", " << W.quote(to_string(curr_time)) << ");";
   W2.exec(sql2);
+
+
+  //     << W.quote(account_id) << ", " << W.quote(amount) << ", "
+  //     << W.quote(curr_time) << ");";
+  // W2.exec(sql2);
+  
 
   W2.commit();
 
   work W3(*C);
   stringstream sql3;
+
   sql3 << "SELECT CANCEL_ID FROM CANCEL_TB WHERE CANCEL_TIME=" << curr_time
+    //=======
+    //sql3 << "SELECT CANCEL_ID FROM CANCEL_TB WHERE CANCEL_TIME=" << curr_time
+    //>>>>>>> parser
        << ";";
   result R3(W3.exec(sql3));
   W3.commit();
 
   int cancel_id = R3[0]["CANCEL_ID"].as<int>();
 
-  updateTranCancel(id, cancel_id, C);
-
+   updateTranCancel(id, cancel_id, C);
+ 
   return 1;
+ }
+
+response database::queryDB(string user_id,string query_id,connection *C)
+{
+  // find canceled
+  response a;
+  nontransaction N(*C);
+  stringstream sql;
+  sql << "SELECT * FROM "
+         "TRANSACTION_TB WHERE "
+         "TRANSACTION_ID ="
+      << query_id << ";";
+  result R(N.exec(sql));
+  string open_id = "";
+  string executed_id = "";
+  string cancel_id = "";
+  for (result::const_iterator c = R.begin();c!=R.end();c++)
+  {
+    if (!(c[1].is_null()))
+   {
+    	  open_id = c[1].as<string>();
+   }
+      
+    if (!(c[2].is_null()))
+ {
+	  open_id = c[2].as<string>();
+ }
+      
+    if (!(c[3].is_null()))
+    {
+	  open_id = c[3].as<string>();
+    }
+   }
+  
+  // W.commit();
+  // find cancel
+    if (cancel_id!="")
+    {
+      stringstream m;
+       m << "SELECT AMOUNT,CANCEL_TIME FROM "
+         "CANCEL_TB WHERE "
+         "ACCOUNT_ID ="
+	   << user_id << " AND CANCEL_ID ="<<cancel_id<<";";
+     result R(N.exec(m));
+     a.cancel = true;
+      for (result::const_iterator c = R.begin();c!=R.end();c++)
+       {
+	 //    a.cancel = true;
+	 a.shares_c = c[0].as<string>();
+	 a.time_c = c[1].as<string>();
+	  }
+    }
+  
+  // find open  
+  if (open_id!= "")
+    {
+       stringstream m;
+       m << "SELECT AMOUNT FROM "
+         "OPEN_TB WHERE "
+         "ACCOUNT_ID ="
+	   << user_id << " AND OPEN_ID ="<<open_id<<";";
+     result R(N.exec(m));
+     a.open = true;
+      for (result::const_iterator c = R.begin();c!=R.end();c++)
+      {  
+	 a.shares_o = c[0].as<string>();
+	 }
+    }
+  // find executed
+   if (executed_id != "")
+  {
+       stringstream m;
+       m << "SELECT AMOUNT,PRICE,EXECUTED_TIME FROM "
+         "EXECUTED_TB WHERE ("
+         "BUYER_ID ="
+	 << user_id << "OR SELLER_ID="<<user_id<<" ) AND EXECUTED_ID ="<<executed_id<<";";
+     result R(N.exec(m));
+     a.executed = true;
+      for (result::const_iterator c = R.begin();c!=R.end();c++)
+      {
+	 a.shares_e = R[0]["AMOUNT"].as<string>();
+	 a.price_e = R[0]["PRICE"].as<string>();
+	 a.time_e = R[0]["EXECUTED_TIME"].as<string>();
+	 }
+      }
+   cout<<a.open<<endl;
+  return a;
 }
