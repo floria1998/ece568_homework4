@@ -38,15 +38,15 @@ int main(int argc, char *argv[]) {
   createPosition("1234", "BOA", 100, C);
   createPosition("2345", "BOA", 100, C);
 
-  createOpen("1234", 13, 2, "BOA", 1, C);
+  createOpen("1234", 24, 2, "BOA", 1, C);
   sleep(2);
   createOpen("1234", 21, -2, "BOA", 2, C);
   sleep(2);
-  createOpen("2345", 23, 10, "BOA", 1, C);
+  createOpen("1234", 23, 3, "BOA", 1, C);
   sleep(2);
-  createOpen("1234", 22, -12, "BOA", 2, C);
+  createOpen("2345", 22, -7, "BOA", 2, C);
 
-  matchOneOrder(C, "3");
-  // string open1 = "1";
-  // cancel(open1, C);
+  matchOneOrder(C, "4");
+  string opn1 = "2";
+  cancel(opn1, C);
 }

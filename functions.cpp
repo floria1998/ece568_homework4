@@ -99,11 +99,13 @@ int addToExecuted(const string &buyer_id, const string &seller_id, double price,
   return executed_id;
 }
 
-int updateOpenAmount(const string &id, int new_amount, connection *C) {
+int updateOpenAmount(const string &open_id, const string &id, int new_amount,
+                     connection *C) {
   work W(*C);
   stringstream sql;
   sql << "UPDATE OPEN_TB SET AMOUNT =" << W.quote(new_amount)
-      << " WHERE ACCOUNT_ID =" << W.quote(id) << ";";
+      << " WHERE OPEN_ID=" << W.quote(open_id)
+      << " AND ACCOUNT_ID =" << W.quote(id) << ";";
   W.exec(sql.str());
   W.commit();
   return 1;
@@ -224,7 +226,7 @@ int updateAccount(const string &id, double balance, double price, int amount,
       << " WHERE ACCOUNT_ID=" << id << ";";
   W.exec(sql.str());
   W.commit();
-  return 1;
+  return new_balance;
 }
 
 int createOpen(string id, double price, int amount, string symbol, int type,
@@ -242,10 +244,8 @@ int createOpen(string id, double price, int amount, string symbol, int type,
       double remain = balance - deduct;
       work W4(*C);
       stringstream sql_deduct;
-      cout << "beign" << endl;
       sql_deduct << "UPDATE USER_TB SET BALANCE=" << W4.quote(to_string(remain))
                  << " WHERE ACCOUNT_ID=" << id << ";";
-      cout << "minus " << deduct << " from buyer account " << id << endl;
       W4.exec(sql_deduct.str());
       W4.commit();
     } else {
@@ -385,8 +385,10 @@ bool matchOneOrder(connection *C, const string &tran_id) {
         }
         // totally delete the buyer from the open table and add to the executed
         // table update the amount of seller in the open table
+        remain = -remain;
         deleteFromOpen(to_string(open_id), C);
-        updateOpenAmount(to_string(sell_account_id), remain, C);
+        updateOpenAmount(to_string(sell_open_id), to_string(sell_account_id),
+                         remain, C);
         int exe_id =
             addToExecuted(to_string(account_id), to_string(sell_account_id),
                           tran_price, amount, symbol, C);
@@ -412,7 +414,7 @@ bool matchOneOrder(connection *C, const string &tran_id) {
         // table update the amount of buyer in the open table, add part that
         // matched to the executed table
         deleteFromOpen(to_string(sell_open_id), C);
-        updateOpenAmount(to_string(account_id), amount, C);
+        updateOpenAmount(to_string(open_id), to_string(account_id), amount, C);
         int exe_id =
             addToExecuted(to_string(account_id), to_string(sell_account_id),
                           tran_price, sell_amount, symbol, C);
@@ -448,12 +450,15 @@ bool matchOneOrder(connection *C, const string &tran_id) {
     amount = -amount;
     stringstream sql3;
     // select all the buy orders that match
-    sql3 << "SELECT OPEN_ID,BALANCE,ACCOUNT_ID,PRICE,AMOUNT,TIME, "
+    sql3 << "SELECT "
+            "OPEN_TB.OPEN_ID,TRAN_TYPE,BALANCE,SYMBOL,OPEN_TB.ACCOUNT_ID,PRICE,"
+            "AMOUNT,"
+            "OPEN_TIME, "
             "TRANSACTION_ID FROM "
             "OPEN_TB, TRANSACTION_TB,USER_TB WHERE "
-            "TRANSACTION_TB.OPEN_ID=OPEN_TB.OPEN_ID "
+            "TRANSACTION_TB.OPEN_ID=OPEN_TB.OPEN_ID AND "
             "USER_TB.ACCOUNT_ID=OPEN_TB.ACCOUNT_ID AND "
-            "ACCOUNT_ID !="
+            "OPEN_TB.ACCOUNT_ID !="
          << account_id << " AND TRAN_TYPE=" << 1 << " AND PRICE>" << price
          << " AND SYMBOL=" << W.quote(symbol) << " ORDER BY PRICE DESC;";
     result R3(W.exec(sql3.str()));
@@ -461,90 +466,98 @@ bool matchOneOrder(connection *C, const string &tran_id) {
     if (num == 0) {
       return false;
     }
+    W.commit();
     // iterate through all the buy orders
-    for (result::const_iterator k = R3.begin(); k != R3.begin(); k++) {
-      double sell_balance = k["BALANCE"].as<int>();
-      int sell_open_id = k["OPEN_ID"].as<int>();
-      int sell_transaction_id = k["TRANSACTION_ID"].as<int>();
-      int sell_account_id = k["ACCOUNT_ID"].as<int>();
-      double sell_price = k["PRICE"].as<double>();
-      int sell_amount = k["AMOUNT"].as<int>();
-      string sell_symbol = k["SYMBOL"].as<string>();
-      int sell_type = k["TRAN_TYPE"].as<int>();
-      long sell_open_time = k["OPEN_TIME"].as<long>();
-      double tran_price = open_time > sell_open_time ? sell_price : price;
+    for (result::const_iterator k = R3.begin(); k != R3.end(); k++) {
+      double buy_balance = k["BALANCE"].as<int>();
+      int buy_open_id = k["OPEN_ID"].as<int>();
+      int buy_transaction_id = k["TRANSACTION_ID"].as<int>();
+      int buy_account_id = k["ACCOUNT_ID"].as<int>();
+      double buy_price = k["PRICE"].as<double>();
+      int buy_amount = k["AMOUNT"].as<int>();
+      string buy_symbol = k["SYMBOL"].as<string>();
+      int buy_type = k["TRAN_TYPE"].as<int>();
+      long buy_open_time = k["OPEN_TIME"].as<long>();
+      double tran_price = open_time > buy_open_time ? buy_price : price;
 
-      if (amount < sell_amount) {
-        int remain = sell_amount - amount;
+      if (amount < 0) {
+        amount = -amount;
+      }
+      if (amount < buy_amount) {
+        int remain = buy_amount - amount;
         // update seller account;
-        updateAccount(to_string(sell_account_id), sell_balance, tran_price,
-                      amount, C);
+        balance = updateAccount(to_string(account_id), balance, tran_price,
+                                amount, C);
         // update buyer account
-        createPosition(to_string(account_id), symbol, amount, C);
+        createPosition(to_string(buy_account_id), symbol, amount, C);
         if (tran_price < price) {
           double difPirce = price - tran_price;
           double toadd = difPirce * amount;
-          payBackBuyer(account_id, toadd, C);
+          payBackBuyer(buy_account_id, toadd, C);
         }
         // totally delete the buyer from the open table and add to the executed
         // table update the amount of seller in the open table
+        remain = -remain;
         deleteFromOpen(to_string(open_id), C);
-        updateOpenAmount(to_string(sell_account_id), remain, C);
+        updateOpenAmount(to_string(buy_open_id), to_string(buy_account_id),
+                         remain, C);
         int exe_id =
-            addToExecuted(to_string(account_id), to_string(sell_account_id),
+            addToExecuted(to_string(account_id), to_string(buy_account_id),
                           tran_price, amount, symbol, C);
         // update the transaction table, set buyer's open_id to null and set the
         // executed_id
         updateTranEXEOnly(tran_id, exe_id, C);
         // update the transaction table, set seller's executed_id
-        updateTranEXEandOpen(to_string(sell_transaction_id), to_string(exe_id),
+        updateTranEXEandOpen(to_string(buy_transaction_id), to_string(exe_id),
                              C);
         break;
-      } else if (amount > sell_amount) {
-        amount = amount - sell_amount;
+      } else if (amount > buy_amount) {
+        amount = amount - buy_amount;
         // update the seller account, buyer account
-        updateAccount(to_string(sell_account_id), sell_balance, tran_price,
-                      sell_amount, C);
-        createPosition(to_string(account_id), symbol, sell_amount, C);
+        balance = updateAccount(to_string(account_id), balance, tran_price,
+                                buy_amount, C);
+        createPosition(to_string(buy_account_id), symbol, buy_amount, C);
         if (tran_price < price) {
           double difPirce = price - tran_price;
-          double toadd = difPirce * sell_amount;
-          payBackBuyer(account_id, toadd, C);
+          double toadd = difPirce * buy_amount;
+          payBackBuyer(buy_account_id, toadd, C);
         }
         // totally delete the sell from the open table and add to the executed
         // table update the amount of buyer in the open table, add part that
         // matched to the executed table
-        deleteFromOpen(to_string(sell_open_id), C);
-        updateOpenAmount(to_string(account_id), amount, C);
+        deleteFromOpen(to_string(buy_open_id), C);
+        amount = -amount;
+        updateOpenAmount(to_string(open_id), to_string(account_id), amount, C);
         int exe_id =
-            addToExecuted(to_string(account_id), to_string(sell_account_id),
-                          tran_price, sell_amount, symbol, C);
+            addToExecuted(to_string(account_id), to_string(buy_account_id),
+                          tran_price, buy_amount, symbol, C);
         // update the transaction table, set seller's open_id to null and set
         // the executed_id
-        updateTranEXEOnly(to_string(sell_transaction_id), exe_id, C);
+        updateTranEXEOnly(to_string(buy_transaction_id), exe_id, C);
         updateTranEXEandOpen(tran_id, to_string(exe_id), C);
         continue;
         // update the transaction table, set buyer's executed_id
       } else {
-        updateAccount(to_string(sell_account_id), sell_balance, tran_price,
-                      amount, C);
-        createPosition(to_string(account_id), symbol, amount, C);
+        balance = updateAccount(to_string(account_id), balance, tran_price,
+                                amount, C);
+        createPosition(to_string(buy_account_id), symbol, amount, C);
         if (tran_price < price) {
           double difPirce = price - tran_price;
-          double toadd = difPirce * sell_amount;
-          payBackBuyer(account_id, toadd, C);
+          double toadd = difPirce * buy_amount;
+          payBackBuyer(buy_account_id, toadd, C);
         }
-        deleteFromOpen(to_string(sell_open_id), C);
+        deleteFromOpen(to_string(buy_open_id), C);
         deleteFromOpen(to_string(open_id), C);
         int exe_id =
-            addToExecuted(to_string(account_id), to_string(sell_account_id),
-                          tran_price, sell_amount, symbol, C);
-        updateTranEXEOnly(to_string(sell_transaction_id), exe_id, C);
+            addToExecuted(to_string(account_id), to_string(buy_account_id),
+                          tran_price, buy_amount, symbol, C);
+        updateTranEXEOnly(to_string(buy_transaction_id), exe_id, C);
         updateTranEXEOnly(tran_id, exe_id, C);
         break;
       }
     }
   }
+
   return 1;
 }
 
