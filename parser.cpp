@@ -23,6 +23,45 @@ string parser::createResponse()
   return buf;
 }
 
+string parser::createSuccess(string id)
+{
+  string buf;
+  XMLDocument doc;
+  XMLDeclaration * declaration = doc.NewDeclaration();
+  doc.InsertFirstChild(declaration);
+  XMLElement * root = doc.NewElement("created");
+  doc.InsertEndChild(root);
+  // XMLElement * type = doc.NewElement("Type");
+  root->SetText("Account has been created");
+  const char * id1 = id.c_str();
+  root->SetAttribute("id",id1);
+  // root->InsertEndChild(type);
+  XMLPrinter printer;
+  doc.Print(&printer);
+  buf = printer.CStr();
+  return buf;
+}
+
+string parser::createError(string id)
+{
+  string buf;
+  XMLDocument doc;
+  XMLDeclaration * declaration = doc.NewDeclaration();
+  doc.InsertFirstChild(declaration);
+  XMLElement * root = doc.NewElement("error");
+  doc.InsertEndChild(root);
+  //XMLElement * type = doc.NewElement("Type");
+  root->SetText("Account already exists");
+  const char * id1 = id.c_str();
+  root->SetAttribute("id",id1);
+  // root->InsertEndChild(type);
+  XMLPrinter printer;
+  doc.Print(&printer);
+  buf = printer.CStr();
+  return buf;
+}
+
+
 string parser::parsexmlTop(const char * buffer)
 {
   //cout<<buffer<<endl;

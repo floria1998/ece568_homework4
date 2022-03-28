@@ -6,11 +6,14 @@
 #include "transactions.h"
 
 using namespace tinyxml2;
+using namespace std;
 
 class parser{
  public:
-  std::string createResponse();
-  std::string parsexmlTop(const char * buffer);
+  string createResponse();
+  string parsexmlTop(const char * buffer);
   account createAccount(const char * buffer);
   transactions parseTransec(const char * buffer);
+  string createSuccess(string id);
+  string createError(string id);
 };
