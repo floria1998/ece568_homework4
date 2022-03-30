@@ -19,7 +19,8 @@ public:
   void dropTable(connection *C, string table);
   bool checkAccountExist(const string &id, connection *C);
   int deleteFromOpen(const string &id, connection *C);
-  int addToExecuted(const string &buyer_id, const string &seller_id,
+  int addToExecuted(const string &buy_id, const string &sell_id,
+                    const string &buyer_id, const string &seller_id,
                     double price, int amount, string symbol, connection *C);
   int createAccount(double balance, string id, connection *C);
   int createPosition(const string &id, const string &symbol, int amount,
