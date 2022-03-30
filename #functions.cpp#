@@ -488,12 +488,12 @@ bool database::matchOneOrder(connection *C, const string &open_id) {
   return 1;
 }
 
-vector<response> database::cancel(string &acc_id, string &id, connection *C) {
+vector<response> database::cancel(string &acc_id,string &id, connection *C) {
   work W(*C);
   vector<response> newvec;
   stringstream sql;
   sql << "SELECT OPEN_ID,SYMBOL,ACCOUNT_ID,TRAN_TYPE,AMOUNT,PRICE FROM "
-         "OPEN_TB WHERE OPEN_ID="
+    "OPEN_TB WHERE ACCOUNT_ID="<<W.quote(acc_id)<<" AND OPEN_ID="
       << W.quote(id) << ";";
   result R(W.exec(sql));
   if (R.size() == 0) {

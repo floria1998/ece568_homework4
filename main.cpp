@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
   p.matchOneOrder(C, "2");
   string opn1 = "3";
   vector<response> newvec;
-  newvec = p.cancel(opn1, C);
+  // newvec = p.cancel(opn1, C);
   /*
   p.dropTable(C, "USER_TB");
   p.dropTable(C, "POSITION_TB");

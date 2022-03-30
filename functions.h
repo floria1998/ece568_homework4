@@ -37,7 +37,7 @@ public:
   int updateTranEXEandOpen(const string &id, const string &exe_id,
                            connection *C);
   int payBackBuyer(int id, double toadd, connection *C);
-  vector<response> cancel(string &id, connection *C);
+  vector<response> cancel(string &acc_id, string &id, connection *C);
   // int updateTranCancel(string &id,int cancel_id,connection *C);
   //=======
   // int updateAccount(string id, double price, int amount, connection *C);
