@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
   dataBase.dropTable(C, "CANCEL_TB");
   dataBase.createTable(C, "createTable.sql");
 
-<<<<<<< HEAD
+  //<<<<<<< HEAD
    string res;
    if (top == "create")
    {
@@ -223,67 +223,19 @@ int main(int argc, char *argv[]) {
 	   ordr = docNew->NewElement("error");
 	   ordr->SetText("Invalid tag");
 	 }
-	 }
+ }
        
         XMLPrinter printer;
         docNew->Print(&printer);
         res = printer.CStr(); 
-=======
-  string res;
-  if (top == "create") {
-    account newAccount = p.createAccount(m);
-    double m = stod(newAccount.balance);
-    if (dataBase.createAccount(m, newAccount.account_id, C) == 0) {
-      res = p.createError(newAccount.account_id);
-      cout << res << endl;
-    } else {
-      res = p.createSuccess(newAccount.account_id);
-      cout << res << endl;
-      dataBase.createPosition(newAccount.account_id, newAccount.symbol,
-                              stoi(newAccount.shares), C);
->>>>>>> 0c999dedf7a724dacfc65c8bf24ff1564c15fe72
     }
-  } else if (top == "transactions") {
-    transactions tran = p.parseTransec(m);
-    if (tran.cancel) {
-      // dataBase.cancel(tran.cancel_id,C);
-    }
-<<<<<<< HEAD
-    
-   // string res = p.createResponse();
-  const char * mess = res.c_str();
-  send(client_connection_fd,mess,strlen(mess),0);
-=======
-
-    /* if (tran.query)
-      {
-
-      }
-
-    if (tran.order)
-      {
-        double price = stod(tran.price);
-        int amount = stoi(tran.amount);
-        int type;
-        if (amount<0)
-        {
-            type = 2;
-        }
-        else
-         {
-            type = 1;
-         }
-       int tran_id = createOpen(tran.account_id,price,amount,symbol,type,C);
-       matchOneOrder(C,tran_id);
-       }*/
-  } else {
+      else {
     cerr << "top level" << endl;
   }
 
   // string res = p.createResponse();
   const char *mess = res.c_str();
   send(client_connection_fd, mess, strlen(mess), 0);
->>>>>>> 0c999dedf7a724dacfc65c8bf24ff1564c15fe72
   freeaddrinfo(host_info_list);
   close(socket_fd);
 
