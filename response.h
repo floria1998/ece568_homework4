@@ -2,28 +2,28 @@
 using namespace std;
 class response{
  public:
-  bool open;
+  int open;
   string shares_o;
   
-  bool executed;
+  int executed;
   string shares_e;
   string price_e;
   string time_e; 
   
-  bool cancel;
+  int cancel;
   string shares_c;
   string time_c;
 
   response(){
-    open = false;
+    open = 0;
     shares_o = "";
 
-    executed = false;
+    executed = 0;
     shares_e = "";
     price_e = "";
     time_e = "";
 
-    cancel = false;
+    cancel = 0;
     shares_c = "";
     time_c = "";
   }

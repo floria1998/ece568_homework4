@@ -88,8 +88,7 @@ int main(int argc, char *argv[]) {
   dataBase.dropTable(C, "EXECUTED_TB");
   dataBase.dropTable(C, "CANCEL_TB");
   dataBase.createTable(C, "createTable.sql");
-
-  //<<<<<<< HEAD
+  
    string res;
    if (top == "create")
    {
@@ -107,8 +106,8 @@ int main(int argc, char *argv[]) {
 	 {
 	   if (dataBase.createAccount(stod(newAccount[i].balance), newAccount[i].account_id, C)==0)
 	     {
-	        XMLElement * type = docNew->NewElement("error");
-                type->SetText("Account already exists");
+	         XMLElement * type = docNew->NewElement("error");
+                 type->SetText("Account already exists");
 		 string one = newAccount[i].account_id;
 		 type->SetAttribute("id",one.c_str());
 		 root->InsertEndChild(type);
@@ -125,12 +124,11 @@ int main(int argc, char *argv[]) {
 	 }
        else if (newAccount[i].position==1)
 	 {
-	   //cout<<newAccount[i].shares<<endl;
 	   int m1 = stoi(newAccount[i].shares);
 	   if (dataBase.createPosition(newAccount[i].account_id,newAccount[i].symbol,m1,C)==0)
 	    {
-	        XMLElement * type = docNew->NewElement("error");
-                type->SetText("Account already exists");
+	         XMLElement * type = docNew->NewElement("error");
+                 type->SetText("Account already exists");
 		 string one = newAccount[i].account_id;
 		 string two = newAccount[i].symbol;
 		 type->SetAttribute("id",one.c_str());
@@ -151,18 +149,15 @@ int main(int argc, char *argv[]) {
      }
        XMLPrinter printer;
        docNew->Print(&printer);
-       res = printer.CStr();     
-   
-   }
+       res = printer.CStr();   
+  }
   else if (top == "transactions")
-   {
+  {
        
-        XMLDocument * doc = new XMLDocument();
-        doc->Parse(m);
-        XMLElement * rootElement = doc->RootElement(); //get transaction
-        string account_id = rootElement->Attribute("id");
-
-	// create response
+       XMLDocument * doc = new XMLDocument();
+       doc->Parse(m);
+       XMLElement * rootElement = doc->RootElement(); //get transaction
+       string account_id = rootElement->Attribute("id");
        XMLDocument * docNew = new XMLDocument() ;
        XMLDeclaration * declaration = docNew->NewDeclaration();
        docNew->InsertFirstChild(declaration);
@@ -170,15 +165,12 @@ int main(int argc, char *argv[]) {
        docNew->InsertEndChild(root);
 
        for (XMLElement * child = rootElement->FirstChildElement();child;child=child->NextSiblingElement())
-	 {
-	   //  XMLElement * child = rootElement->FirstChildElement();
+       {
        string n = child->Value();      
-       cout<<n<<endl;
        XMLElement * ordr;
        if (n == "order")
 	 {
 	   string symbol = child->Attribute("sym");
-	   cout<<symbol<<endl;
 	   string amount = child->Attribute("amount");	   
 	   string limit = child->Attribute("limit");
 	    
@@ -186,7 +178,6 @@ int main(int argc, char *argv[]) {
 	   amount[0]=='-'?type=2:type=1;
 	   int transId =0;
 	   transId = dataBase.createOpen(account_id,stod(limit),stoi(amount),symbol,type,C);
-	   // cout<<transId<<endl;
 	     if (transId == -1)
 	     {
 	         ordr = docNew->NewElement("error");
@@ -212,11 +203,48 @@ int main(int argc, char *argv[]) {
 	 }    
        else if (n == "query")
 	 {
-	   
+	   dataBase.createAccount(200, "1234", C);
+	   dataBase.createPosition("1234", "BOA", 100, C);
+	   dataBase.createOpen("1234", 24, 2, "BOA", 1, C);
+	   string open_id = child->Attribute("id");
+	   vector<response> res =dataBase.queryDB(account_id,open_id,C);
+	    ordr = docNew->NewElement("status");
+	    for (int i = 0;i<res.size();i++)
+	     {
+	       XMLElement * child1; 
+	       if (res[i].cancel==1)
+		 {
+		   child1 = docNew->NewElement("canceled"); 
+		   const char * shares = res[i].shares_c.c_str();  
+		   child1->SetAttribute("shares",shares);
+		   const char * time = res[i].time_c.c_str();  
+		   child1->SetAttribute("time",time);
+		 }
+	        else if (res[i].executed==1)
+		 {
+		   child1 = docNew->NewElement("executed"); 
+		   const char * shares = res[i].shares_e.c_str();  
+		   child1->SetAttribute("shares",shares);
+		   const char * time = res[i].time_e.c_str();  
+		   child1->SetAttribute("time",time);
+		   const char * price = res[i].price_e.c_str();  
+		   child1->SetAttribute("time",price);		   
+		 }
+		 else  if (res[i].open==1)
+		 {
+		   child1 = docNew->NewElement("open"); 
+		   const char * shares = res[i].shares_o.c_str();  
+		   child1->SetAttribute("shares",shares);
+		   
+		 }
+
+	       ordr->InsertEndChild(child1); 
+	     }
+	   root->InsertEndChild(ordr);
 	 }
        else if (n == "cancel")
 	 {
-	   
+	   // dataBase.cancel();
 	 }
        else
 	 {
@@ -233,8 +261,7 @@ int main(int argc, char *argv[]) {
     cerr << "top level" << endl;
   }
 
-  // string res = p.createResponse();
-  const char *mess = res.c_str();
+   const char *mess = res.c_str();
   send(client_connection_fd, mess, strlen(mess), 0);
   freeaddrinfo(host_info_list);
   close(socket_fd);
