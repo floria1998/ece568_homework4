@@ -203,12 +203,12 @@ int main(int argc, char *argv[]) {
 	 }    
        else if (n == "query")
 	 {
-	   dataBase.createAccount(200, "1234", C);
-	   dataBase.createPosition("1234", "BOA", 100, C);
-	   dataBase.createOpen("1234", 24, 2, "BOA", 1, C);
+	   // dataBase.createAccount(200, "1234", C);
+	   //dataBase.createPosition("1234", "BOA", 100, C);
+	   //dataBase.createOpen("1234", 24, 2, "BOA", 1, C);
 	   string open_id = child->Attribute("id");
 	   vector<response> res =dataBase.queryDB(account_id,open_id,C);
-	    ordr = docNew->NewElement("status");
+	   ordr = docNew->NewElement("status");
 	    for (int i = 0;i<res.size();i++)
 	     {
 	       XMLElement * child1; 
@@ -244,7 +244,36 @@ int main(int argc, char *argv[]) {
 	 }
        else if (n == "cancel")
 	 {
-	   // dataBase.cancel();
+	   string open_id = child->Attribute("id");
+	   vector<response> res =dataBase.cancel(account_id,open_id,C);
+	   ordr = docNew->NewElement("status");
+	   string open_id = child->Attribute("id");
+	   vector<response> res =dataBase.queryDB(account_id,open_id,C);
+	   ordr = docNew->NewElement("status");
+	    for (int i = 0;i<res.size();i++)
+	     {
+	       XMLElement * child1; 
+	       if (res[i].cancel==1)
+		 {
+		   child1 = docNew->NewElement("canceled"); 
+		   const char * shares = res[i].shares_c.c_str();  
+		   child1->SetAttribute("shares",shares);
+		   const char * time = res[i].time_c.c_str();  
+		   child1->SetAttribute("time",time);
+		 }
+	        else if (res[i].executed==1)
+		 {
+		   child1 = docNew->NewElement("executed"); 
+		   const char * shares = res[i].shares_e.c_str();  
+		   child1->SetAttribute("shares",shares);
+		   const char * time = res[i].time_e.c_str();  
+		   child1->SetAttribute("time",time);
+		   const char * price = res[i].price_e.c_str();  
+		   child1->SetAttribute("time",price);		   
+		 }
+		 ordr->InsertEndChild(child1); 
+	     }
+	   root->InsertEndChild(ordr);
 	 }
        else
 	 {
