@@ -188,9 +188,8 @@ int database::updateAccount(const string &id, double balance, double price,
 }
 
 /*<<<<<<< HEAD
-int database::createOpen(string id, double price, int amount, string symbol, int type, connection *C) {
-  bool exist=checkAccountExist(id,C);
- if(exist==false){
+int database::createOpen(string id, double price, int amount, string symbol, int
+type, connection *C) { bool exist=checkAccountExist(id,C); if(exist==false){
     return -1;
  }
   // place the buyer's order
@@ -489,15 +488,16 @@ bool database::matchOneOrder(connection *C, const string &open_id) {
   return 1;
 }
 
-int database::cancel(string &id, connection *C) {
+vector<response> database::cancel(string &id, connection *C) {
   work W(*C);
+  vector<response> newvec;
   stringstream sql;
   sql << "SELECT OPEN_ID,SYMBOL,ACCOUNT_ID,TRAN_TYPE,AMOUNT,PRICE FROM "
          "OPEN_TB WHERE OPEN_ID="
       << W.quote(id) << ";";
   result R(W.exec(sql));
   if (R.size() == 0) {
-    return 0;
+    return newvec;
   }
   W.commit();
   int open_id = R[0]["OPEN_ID"].as<int>();
@@ -528,17 +528,33 @@ int database::cancel(string &id, connection *C) {
   W2.exec(sql2);
   W2.commit();
 
+  response cancel_res;
+  cancel_res.cancel = true;
+  cancel_res.shares_c = to_string(amount);
+  cancel_res.time_c = to_string(curr_time);
+
+  newvec.push_back(cancel_res);
+
   work W3(*C);
   stringstream sql3;
 
-  sql3 << "SELECT CANCEL_ID FROM CANCEL_TB WHERE CANCEL_TIME=" << curr_time
-       << ";";
+  sql3 << "SELECT EXECUTED_TB.AMOUNT,EXECUTED_TB.PRICE,EXECUTED_TIME FROM "
+          "CANCEL_TB, EXECUTED_TB WHERE BUY_ID="
+       << W3.quote(id) << " OR SELLER_ID=" << W3.quote(id) << ";";
   result R3(W3.exec(sql3));
   W3.commit();
-
-  int cancel_id = R3[0]["CANCEL_ID"].as<int>();
-
-  return cancel_id;
+  for (result::const_iterator k = R3.begin(); k != R3.end(); k++) {
+    response cancel_response;
+    cancel_response.executed = true;
+    string exe_amount = R3[0]["AMOUNT"].as<string>();
+    cancel_response.shares_e = exe_amount;
+    string exe_price = R3[0]["PRICE"].as<string>();
+    cancel_response.price_e = exe_price;
+    string exe_time = R3[0]["EXECUTED_TIME"].as<string>();
+    cancel_response.time_e = exe_time;
+    newvec.push_back(cancel_response);
+  }
+  return newvec;
 }
 /*
 response database::queryDB(string user_id, string query_id, connection *C) {

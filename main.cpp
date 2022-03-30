@@ -39,17 +39,19 @@ int main(int argc, char *argv[]) {
   p.createPosition("1234", "BOA", 100, C);
   p.createPosition("2345", "BOA", 100, C);
 
-  p.createOpen("1234", 24, 2, "BOA", 1, C);
+  p.createOpen("2345", 24, 1, "BOA", 1, C);
+
   sleep(2);
   p.createOpen("1234", 21, -2, "BOA", 2, C);
   sleep(2);
-  p.createOpen("1234", 23, 3, "BOA", 1, C);
+  p.createOpen("2345", 23, 3, "BOA", 1, C);
   sleep(2);
   p.createOpen("2345", 22, -7, "BOA", 2, C);
 
-  p.matchOneOrder(C, "4");
-  string opn1 = "2";
-  p.cancel(opn1, C);
+  p.matchOneOrder(C, "2");
+  string opn1 = "3";
+  vector<response> newvec;
+  newvec = p.cancel(opn1, C);
   /*
   p.dropTable(C, "USER_TB");
   p.dropTable(C, "POSITION_TB");
