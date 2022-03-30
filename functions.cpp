@@ -5,6 +5,7 @@
 #include <pqxx/pqxx>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 using namespace std;
 using namespace pqxx;
@@ -56,7 +57,6 @@ bool database::checkAccountExist(const string &id, connection *C) {
   string sql = "SELECT * FROM USER_TB WHERE ACCOUNT_ID=" + id + ";";
   result R(W.exec(sql));
   W.commit();
-  // if not exist, return false
   if (R.size() == 0) {
     return false;
   } else {
@@ -72,7 +72,7 @@ int database::deleteFromOpen(const string &id, connection *C) {
   W.commit();
   return 1;
 }
-///@CHANGE
+
 int database::addToExecuted(const string &buy_id, const string &sell_id,
                             const string &buyer_id, const string &seller_id,
                             double price, int amount, string symbol,
@@ -152,7 +152,7 @@ int database::createPosition(const string &id, const string &symbol, int amount,
                " AND SYMBOL=" + W.quote(symbol) + ";";
   result R(W.exec(sql));
   int num = R.size();
-  // work W(*C);
+
   if (num == 0) {
     stringstream sql2;
     sql2 << "INSERT INTO POSITION_TB (SYMBOL,ACCOUNT_ID,AMOUNT) VALUES ("
@@ -187,14 +187,6 @@ int database::updateAccount(const string &id, double balance, double price,
   return new_balance;
 }
 
-/*<<<<<<< HEAD
-int database::createOpen(string id, double price, int amount, string symbol, int
-type, connection *C) { bool exist=checkAccountExist(id,C); if(exist==false){
-    return -1;
- }
-  // place the buyer's order
-   if (type == 1) {
-   =======*/
 int database::createOpen(string id, double price, int amount, string symbol,
                          int type, connection *C) {
   // place the buyer's order
@@ -203,7 +195,6 @@ int database::createOpen(string id, double price, int amount, string symbol,
     return -1;
   }
   if (type == 1) {
-    //>>>>>>> 0c999dedf7a724dacfc65c8bf24ff1564c15fe72
     double deduct = price * (double)amount;
     stringstream sql_buyer;
     work N3(*C);
@@ -556,81 +547,57 @@ vector<response> database::cancel(string &acc_id, string &id, connection *C) {
   }
   return newvec;
 }
-/*
-response database::queryDB(string user_id, string query_id, connection *C) {
-    // find canceled
-    response a;
-    nontransaction N(*C);
-    stringstream sql;
-    sql << "SELECT * FROM "
-           "TRANSACTION_TB WHERE "
-           "TRANSACTION_ID ="
-        << query_id << ";";
-    result R(N.exec(sql));
-    string open_id = "";
-    string executed_id = "";
-    string cancel_id = "";
-    for (result::const_iterator c = R.begin(); c != R.end(); c++) {
-        if (!(c[1].is_null())) {
-            open_id = c[1].as<string>();
-        }
 
-        if (!(c[2].is_null())) {
-            open_id = c[2].as<string>();
-        }
+vector<response> database::queryDB(string user_id, string query_id,
+                                   connection *C) {
+  response a;
+  nontransaction N(*C);
+  vector<response> ans;
+  // OPEN_TB EXECUTED_TB CANCEL_TB
+  stringstream sql;
+  sql << "SELECT AMOUNT FROM "
+         "OPEN_TB WHERE "
+         "OPEN_ID ="
+      << query_id << " AND ACCOUNT_ID =" << user_id << ";";
+  result R(N.exec(sql));
+  for (result::const_iterator c = R.begin(); c != R.end(); c++) {
+    response h;
+    h.open = 1;
+    h.shares_o = c[0].as<string>();
+    ans.push_back(h);
+  }
 
-        if (!(c[3].is_null())) {
-            open_id = c[3].as<string>();
-        }
-    }
+  stringstream m;
+  m << "SELECT AMOUNT,CANCEL_TIME FROM "
+       "CANCEL_TB WHERE "
+       "ACCOUNT_ID ="
+    << user_id << " AND CANCEL_ID =" << query_id << ";";
+  result P(N.exec(m));
+  //    a.cancel = true;
+  for (result::const_iterator c = P.begin(); c != P.end(); c++) {
+    //    a.cancel = true;
+    response h;
+    h.cancel = 1;
+    h.shares_c = c[0].as<string>();
+    h.time_c = c[1].as<string>();
+    ans.push_back(h);
+  }
 
-    // W.commit();
-    // find cancel
-    if (cancel_id != "") {
-        stringstream m;
-        m << "SELECT AMOUNT,CANCEL_TIME FROM "
-             "CANCEL_TB WHERE "
-             "ACCOUNT_ID ="
-          << user_id << " AND CANCEL_ID =" << cancel_id << ";";
-        result R(N.exec(m));
-        a.cancel = true;
-        for (result::const_iterator c = R.begin(); c != R.end(); c++) {
-            //    a.cancel = true;
-            a.shares_c = c[0].as<string>();
-            a.time_c = c[1].as<string>();
-        }
-    }
-
-    // find open
-    if (open_id != "") {
-        stringstream m;
-        m << "SELECT AMOUNT FROM "
-             "OPEN_TB WHERE "
-             "ACCOUNT_ID ="
-          << user_id << " AND OPEN_ID =" << open_id << ";";
-        result R(N.exec(m));
-        a.open = true;
-        for (result::const_iterator c = R.begin(); c != R.end(); c++) {
-            a.shares_o = c[0].as<string>();
-        }
-    }
-    // find executed
-    if (executed_id != "") {
-        stringstream m;
-        m << "SELECT AMOUNT,PRICE,EXECUTED_TIME FROM "
-             "EXECUTED_TB WHERE ("
-             "BUYER_ID ="
-          << user_id << "OR SELLER_ID=" << user_id
-          << " ) AND EXECUTED_ID =" << executed_id << ";";
-        result R(N.exec(m));
-        a.executed = true;
-        for (result::const_iterator c = R.begin(); c != R.end(); c++) {
-            a.shares_e = R[0]["AMOUNT"].as<string>();
-            a.price_e = R[0]["PRICE"].as<string>();
-            a.time_e = R[0]["EXECUTED_TIME"].as<string>();
-        }
-    }
-    cout << a.open << endl;
-    return a;
+  // find open
+  stringstream x;
+  x << "SELECT AMOUNT,PRICE,EXECUTED_TIME FROM "
+       "EXECUTED_TB WHERE "
+       "BUY_ID ="
+    << query_id << " OR SELL_ID =" << query_id << ";";
+  result M(N.exec(x));
+  // a.open = true;
+  for (result::const_iterator c = M.begin(); c != M.end(); c++) {
+    response h;
+    h.executed = 1;
+    h.shares_e = c[0].as<string>();
+    h.price_e = c[1].as<string>();
+    h.time_e = c[2].as<string>();
+    ans.push_back(h);
+  }
+  return ans;
 }
- */

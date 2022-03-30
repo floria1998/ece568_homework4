@@ -8,6 +8,7 @@
 #include <pqxx/pqxx>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 using namespace std;
 using namespace pqxx;
@@ -52,7 +53,11 @@ public:
   //  int payBackBuyer(int id, double toadd, connection *C);
   //  int cancel(string &id, connection *C);
   //  void updateTranCancel(string & id, string cancel_id,connection *C);
-  response queryDB(string user_id, string tran_id2, connection *C);
+  //<<<<<<< HEAD
+	 vector<response> queryDB(string user_id, string tran_id2,connection *C);   
+  //=======
+  //response queryDB(string user_id, string tran_id2, connection *C);
+  //>>>>>>> 925fc0132e4c3c3a39c7bf32967612cb4c76cd9d
 };
 
 //>>>>>>> parser
