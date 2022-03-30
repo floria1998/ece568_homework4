@@ -2,6 +2,7 @@
 #include <cstring>
 #include "parser.h"
 #include <iostream>
+#include <vector>
 
 using namespace tinyxml2;
 using namespace std;
@@ -23,19 +24,37 @@ string parser::createResponse()
   return buf;
 }
 
-string parser::createSuccess(string id)
+string parser::createSuccess(string id,string sym,int great)
 {
   string buf;
   XMLDocument doc;
   XMLDeclaration * declaration = doc.NewDeclaration();
   doc.InsertFirstChild(declaration);
-  XMLElement * root = doc.NewElement("created");
+  XMLElement * root = doc.NewElement("results");
   doc.InsertEndChild(root);
-  // XMLElement * type = doc.NewElement("Type");
-  root->SetText("Account has been created");
+  XMLElement * type = doc.NewElement("created");
+  // type->SetText("Success!");
   const char * id1 = id.c_str();
-  root->SetAttribute("id",id1);
-  // root->InsertEndChild(type);
+  type->SetAttribute("id",id1);
+  root->InsertEndChild(type);
+
+  XMLElement * pos;
+   if (great)
+   {
+       pos = doc.NewElement("created");
+   }
+   else
+   {
+      pos = doc.NewElement("error");
+      pos->SetText("Cannot create position");
+   }
+
+  const char * m = sym.c_str();
+   
+  pos->SetAttribute("sym",m);
+  pos->SetAttribute("id",id1);
+  
+  root->InsertEndChild(pos);
   XMLPrinter printer;
   doc.Print(&printer);
   buf = printer.CStr();
@@ -48,13 +67,13 @@ string parser::createError(string id)
   XMLDocument doc;
   XMLDeclaration * declaration = doc.NewDeclaration();
   doc.InsertFirstChild(declaration);
-  XMLElement * root = doc.NewElement("error");
+  XMLElement * root = doc.NewElement("results");
   doc.InsertEndChild(root);
-  //XMLElement * type = doc.NewElement("Type");
-  root->SetText("Account already exists");
+  XMLElement * type = doc.NewElement("error");
+  type->SetText("Account already exists");
   const char * id1 = id.c_str();
-  root->SetAttribute("id",id1);
-  // root->InsertEndChild(type);
+  type->SetAttribute("id",id1);
+  root->InsertEndChild(type);
   XMLPrinter printer;
   doc.Print(&printer);
   buf = printer.CStr();
@@ -75,28 +94,41 @@ string parser::parsexmlTop(const char * buffer)
   return rootName;
 }
 
-account parser::createAccount(const char *buffer)
+vector<account> parser::createAccount(const char *buffer)
 {
-  account m;
+  vector<account> res;
+  //account m;
   XMLDocument * doc = new XMLDocument();
   doc->Parse(buffer);
   XMLElement * rootElement = doc->RootElement();
-  XMLElement * account1 = rootElement->FirstChildElement("account");
 
-  std::cout<<account1->Value()<<std::endl;
-  m.account_id = account1->Attribute("id");
-  m.balance = account1->Attribute("balance");
-  std::cout<<m.balance<<std::endl;
-
-  XMLElement * brother = rootElement->FirstChildElement("symbol");
-  m.symbol = brother->Attribute("sym");
-  std::cout<<m.symbol<<std::endl;
-
-  XMLElement * share1 = brother->FirstChildElement("account");
-  m.shares = share1->GetText();
-  std::cout<<m.shares<<std::endl;
- 
-  return m;
+  for (XMLElement * child = rootElement->FirstChildElement();child;child=child->NextSiblingElement())
+  {
+    
+      account m;
+      //  m.account_id = child->Attribute("id");
+      string n = child->Value();
+      //  cout<<n<<endl;
+       if (n =="account")
+	{
+	   m.account1 = 1;
+	   m.account_id = child->Attribute("id");
+	   m.balance = child->Attribute("balance");
+	}
+       
+       if (n == "symbol")
+	{
+	  m.position = 1;
+	  // XMLElement * brother = rootElement->FirstChildElement("symbol");
+	  m.symbol = child->Attribute("sym");
+	  XMLElement * share1 = child->FirstChildElement("account");
+	  m.account_id = share1->Attribute("id");
+	  m.shares = share1->GetText();
+	  cout<<"shares:"<<m.shares<<endl;
+	}
+       res.push_back(m);
+     }
+  return res;
 }
 
 transactions parser::parseTransec(const char * buffer)
@@ -132,9 +164,9 @@ transactions parser::parseTransec(const char * buffer)
       else
 	{
 	  std::cerr<<"Invalid tag"<<std::endl;
-	  }
+	}
     }
 
-     cout<<res.order<<endl;
+   // cout<<res.order<<endl;
   return res;
 }

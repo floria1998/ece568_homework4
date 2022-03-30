@@ -22,16 +22,15 @@ class database{
   int addToExecuted(const string &buyer_id, const string &seller_id, double price,int amount, string symbol, connection *C);
   int createAccount(double balance, string id, connection *C);
   int createPosition(const string &id, const string &symbol, int amount,connection *C);
-  //<<<<<<< HEAD
+  
   int updateAccount(const string &id, double balance, double price, int amount, connection *C);
-int createOpen(string id, double price, int amount, string symbol, int type,
-               connection *C);
-bool matchOneOrder(connection *C, const string &tran_id);
+  int createOpen(string id, double price, int amount, string symbol, int type,connection *C);
+  bool matchOneOrder(connection *C, const string &tran_id);
   int updateOpenAmount(const string &open_id, const string &id, int new_amount,connection *C);
-int updateTranEXEOnly(const string &id, int exe_id, connection *C);
-int updateTranEXEandOpen(const string &id, const string &exe_id, connection *C);
-int payBackBuyer(int id, double toadd, connection *C);
-int cancel(string &id, connection *C);
+  int updateTranEXEOnly(const string &id, int exe_id, connection *C);
+  int updateTranEXEandOpen(const string &id, const string &exe_id, connection *C);
+  int payBackBuyer(int id, double toadd, connection *C);
+  int cancel(string &id, connection *C);
   //int updateTranCancel(string &id,int cancel_id,connection *C);
   //=======
   //int updateAccount(string id, double price, int amount, connection *C);

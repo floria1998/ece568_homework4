@@ -90,58 +90,150 @@ int main(int argc, char *argv[])
   dataBase.dropTable(C, "CANCEL_TB");
   dataBase.createTable(C, "createTable.sql");
 
-  string res;
+   string res;
    if (top == "create")
    {
-      account newAccount = p.createAccount(m);
-      double m = stod(newAccount.balance);
-      if (dataBase.createAccount(m, newAccount.account_id, C)==0)
-	{
-	  res = p.createError(newAccount.account_id);
-	  cout<<res<<endl;
-	}
-      else
-	{
-	  res = p.createSuccess(newAccount.account_id);
-	  cout<<res<<endl;
-      	  dataBase.createPosition(newAccount.account_id, newAccount.symbol, stoi(newAccount.shares), C);
-	}
+     XMLDocument * docNew = new XMLDocument();
+     XMLDeclaration * declaration = docNew->NewDeclaration();
+     docNew->InsertFirstChild(declaration);
+     XMLElement * root = docNew->NewElement("results");
+     docNew->InsertEndChild(root);
+
+     vector<account> newAccount = p.createAccount(m);
+      for (int i = 0;i<newAccount.size();i++)
+     { 
+      
+       if (newAccount[i].account1==1)
+	 {
+	   if (dataBase.createAccount(stod(newAccount[i].balance), newAccount[i].account_id, C)==0)
+	     {
+	        XMLElement * type = docNew->NewElement("error");
+                type->SetText("Account already exists");
+		 string one = newAccount[i].account_id;
+		 type->SetAttribute("id",one.c_str());
+		 root->InsertEndChild(type);
+	     }
+	   else
+	     {
+	        XMLElement * type = docNew->NewElement("created");
+                string one = newAccount[i].account_id;
+		type->SetAttribute("id",one.c_str());
+		root->InsertEndChild(type);
+	   
+	     }
+       
+	 }
+       else if (newAccount[i].position==1)
+	 {
+	   //cout<<newAccount[i].shares<<endl;
+	   int m1 = stoi(newAccount[i].shares);
+	   if (dataBase.createPosition(newAccount[i].account_id,newAccount[i].symbol,m1,C)==0)
+	    {
+	        XMLElement * type = docNew->NewElement("error");
+                type->SetText("Account already exists");
+		 string one = newAccount[i].account_id;
+		 string two = newAccount[i].symbol;
+		 type->SetAttribute("id",one.c_str());
+		 type->SetAttribute("sym",two.c_str());	 
+		 root->InsertEndChild(type);
+	    }
+	   else
+	    {
+	        XMLElement * type = docNew->NewElement("created");
+                string one = newAccount[i].account_id;
+		string two = newAccount[i].symbol;
+		type->SetAttribute("id",one.c_str());
+		type->SetAttribute("sym",two.c_str());
+		root->InsertEndChild(type);
+	     }     
+
+	 }
+     }
+       XMLPrinter printer;
+       docNew->Print(&printer);
+       res = printer.CStr();     
+   
    }
   else if (top == "transactions")
-    {
-      transactions tran = p.parseTransec(m);
-      if (tran.cancel)
-	{
-	  dataBase.cancel(tran.cancel_id,C);
-	}
-      
-      /* if (tran.query)
-	{
-	  
-	}
+   {
+       
+        XMLDocument * doc = new XMLDocument();
+        doc->Parse(m);
+        XMLElement * rootElement = doc->RootElement(); //get transaction
+        string account_id = rootElement->Attribute("id");
 
-      if (tran.order)
-	{
-	  double price = stod(tran.price);
-	  int amount = stoi(tran.amount);
-	  int type;
-	  if (amount<0)
-	  {
-	      type = 2;
-	  }
-	  else
-	   {
-	      type = 1;
-	   }
-	 int tran_id = createOpen(tran.account_id,price,amount,symbol,type,C);
-	 matchOneOrder(C,tran_id);
-	 }*/
+	// create response
+       XMLDocument * docNew = new XMLDocument() ;
+       XMLDeclaration * declaration = docNew->NewDeclaration();
+       docNew->InsertFirstChild(declaration);
+       XMLElement * root = docNew->NewElement("results");
+       docNew->InsertEndChild(root);
+
+       for (XMLElement * child = rootElement->FirstChildElement();child;child=child->NextSiblingElement())
+	 {
+	   //  XMLElement * child = rootElement->FirstChildElement();
+       string n = child->Value();      
+       cout<<n<<endl;
+       XMLElement * ordr;
+       if (n == "order")
+	 {
+	   string symbol = child->Attribute("sym");
+	   cout<<symbol<<endl;
+	   string amount = child->Attribute("amount");	   
+	   string limit = child->Attribute("limit");
+	    
+	   int type;
+	   amount[0]=='-'?type=2:type=1;
+	   int transId =0;
+	   transId = dataBase.createOpen(account_id,stod(limit),stoi(amount),symbol,type,C);
+	   // cout<<transId<<endl;
+	     if (transId == -1)
+	     {
+	         ordr = docNew->NewElement("error");
+		 ordr->SetAttribute("sym",child->Attribute("sym"));
+		 ordr->SetAttribute("amount",child->Attribute("amount"));
+		 ordr->SetAttribute("limit",child->Attribute("limit"));
+		 ordr->SetText("Invalid balance number or share number");
+	         root->InsertEndChild(ordr);
+	      
+	     }
+	    else
+	    {
+	        ordr = docNew->NewElement("open");
+		string id1 = to_string(transId);
+		const char * tran_id = id1.c_str();
+		ordr->SetAttribute("sym",child->Attribute("sym"));
+		ordr->SetAttribute("amount",child->Attribute("amount"));
+		ordr->SetAttribute("limit",child->Attribute("limit"));
+		ordr->SetAttribute("id",tran_id);
+		root->InsertEndChild(ordr);
+	    }
+	       
+	 }    
+       else if (n == "query")
+	 {
+	   
+	 }
+       else if (n == "cancel")
+	 {
+	   
+	 }
+       else
+	 {
+	   ordr = docNew->NewElement("error");
+	   ordr->SetText("Invalid tag");
+	 }
+	 }
+       
+        XMLPrinter printer;
+        docNew->Print(&printer);
+        res = printer.CStr(); 
     }
    else
     {
       cerr<<"top level"<<endl;
     }
-  
+    
    // string res = p.createResponse();
   const char * mess = res.c_str();
   send(client_connection_fd,mess,strlen(mess),0);

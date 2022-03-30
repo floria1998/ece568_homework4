@@ -223,10 +223,13 @@ int database::updateAccount(const string &id, double balance, double price, int 
   return new_balance;
 }
 
-int database::createOpen(string id, double price, int amount, string symbol, int type,
-               connection *C) {
+int database::createOpen(string id, double price, int amount, string symbol, int type, connection *C) {
+  bool exist=checkAccountExist(id,C);
+ if(exist==false){
+    return -1;
+ }
   // place the buyer's order
-  if (type == 1) {
+   if (type == 1) {
     double deduct = price * (double)amount;
     stringstream sql_buyer;
     work N3(*C);

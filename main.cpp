@@ -83,7 +83,8 @@ int main(int argc, char *argv[]) {
   sleep(2);
   double price3 = 23;
   int amount3 = 10;
-  p.createOpen(id2, price3, amount3, symbol, type, C);
+ int x =   p.createOpen(id2, price3, amount3, symbol, type, C);
+ cout<<x<<endl;
   string tran_id = "3";
   p.matchOneOrder(C, tran_id);
   string open1 = "1";
