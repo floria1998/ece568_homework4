@@ -22,43 +22,29 @@ using namespace tinyxml2;
 
 vector<string> receiveInfo(int client_connection_fd)  
 {
+   int total = 0;
    vector<string> ans;
-   int finished = 1;
-   int len=1;
-   string number = "";
-   char buffer[1001];
-   memset(buffer,0,1001);
-   string request = "";
-   while(1){
-     if ((finished = recv(client_connection_fd, buffer, len, 0))<=0)
-       {
+   int res_length = 0;
+   string totalRequest="";
+    while(1)
+    {
+     char msg[65536]={0};
+     res_length = recv(client_connection_fd,msg,65536,0);
+     cout<<msg<<endl;
+     if (res_length<=0)
+      {
 	 break;
-       }
-   
-       if (len!= 1)
-	{
-	  buffer[1000] = 0;
-	  string m(buffer,buffer+len);
-	  len = 1;
-	  cout<<m<<endl;
-	  cout<<finished<<endl;
-	  ans.push_back(m);
-	  number = "";
-	  memset(buffer,0,1001);
       }
-      else if (buffer[0]!='\n' &&  len == 1)
-      {
-	  number = number + buffer[0];
-      }
-      else if (buffer[0] == '\n' && len == 1)
-      {
-	
-	  len = stoi(number);
-	  len+=3;
-      }
-     	  
-   }
-    return ans;
+     string msg_str(msg,res_length);
+     totalRequest.append(msg_str);
+     cout<<totalRequest<<endl;
+     total+=res_length;
+     
+     }
+
+   cout<<totalRequest<<endl;
+	  
+   return ans;
 }
 
 void responseClient(int client_connection_fd)
@@ -67,7 +53,7 @@ void responseClient(int client_connection_fd)
   database dataBase;
   dataBase.openDatabase(&C);
   vector<string> ans = receiveInfo(client_connection_fd);
-
+  cout<<"ans"<<ans.size()<<endl;
   for (int i = 0;i<ans.size();i++)
     {
     parser p;
@@ -349,9 +335,10 @@ int main(int argc, char *argv[]) {
       cerr << "Error: cannot accept connection on socket" << endl;
       return -1;
     }   
-    
-    thread t1(&responseClient,client_connection_fd);
-    t1.detach();
+    // cout<<client_connection_fd<<endl;
+    // thread t1(&responseClient,client_connection_fd);
+    // t1.detach();
+    responseClient(client_connection_fd);
    }
   freeaddrinfo(host_info_list);
   close(socket_fd);

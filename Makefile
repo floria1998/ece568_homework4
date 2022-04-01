@@ -7,8 +7,8 @@ all: $(TARGETS)
 clean:
 	rm -f $(TARGETS)
 
-client: client.cpp
-	g++ -g -o $@ $<
+client: client.cpp tinyxml2.cpp 
+	$(CC) $(CFLAGS) -pthread -o client client.cpp tinyxml2.cpp $(EXTRAFLAGS)
 
 test:response.h functions.h functions.cpp main.cpp
 	$(CC) $(CFLAGS) -o test response.h functions.h functions.cpp main.cpp $(EXTRAFLAGS)
