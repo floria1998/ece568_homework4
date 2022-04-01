@@ -195,7 +195,7 @@ int database::createOpen(string id, double price, int amount, string symbol,
   bool exist = checkAccountExist(id, C);
   if (exist == false) {
     //   return "-1";
-    return -2;
+    return -1;
   }
   if (type == 1) {
     double deduct = price * (double)amount;
