@@ -351,9 +351,9 @@ int main(int argc, char *argv[]) {
         } else if (newAccount[i].position == 1) {
           int m1 = stoi(newAccount[i].shares);
           if (dataBase.createPosition(newAccount[i].account_id,
-                                      newAccount[i].symbol, m1, C) == 0) {
+                                      newAccount[i].symbol, m1, C) == -1) {
             XMLElement *type = docNew->NewElement("error");
-            type->SetText("Account already exists");
+            type->SetText("Account does not exists");
             string one = newAccount[i].account_id;
             string two = newAccount[i].symbol;
             type->SetAttribute("id", one.c_str());
