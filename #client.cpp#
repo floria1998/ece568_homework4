@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
   struct addrinfo host_info;
   struct addrinfo *host_info_list;
 
-  const char *hostname = "vcm-25297.vm.duke.edu";
+  const char *hostname = "vcm-24627.vm.duke.edu";
   const char *port = "12345";
 
   memset(&host_info, 0, sizeof(host_info));
@@ -58,16 +58,13 @@ int main(int argc, char *argv[]) {
   }
 
   string line  = "<?xml version='1.0' encoding='UTF-8'?>\n<create>\n<account id = '123456' balance='1000' />\n<symbol sym = 'SPY'>\n<account id = '123456'>100000</account>\n</symbol>\n</create>\n";
-  string x = to_string(sizeof(line));
-  cout<<x<<endl;
-  string final = final+x + "\n" + line;
+  string x = to_string(line.size());
+  string final = final + "\n" + line;
   const char *message = final.c_str();
-  cout<<message<<endl;
   send(socket_fd, message, strlen(message)+1, 0); // send xml file
 
-  // TODO Check if not bloc
-  char buf[65535];
-  recv(socket_fd, &buf, sizeof(buf), 0);
+  // TODO Check if not block
+  recv(socket_fd, &message, sizeof(message), 0);
 
   cout << buf << endl;
 
