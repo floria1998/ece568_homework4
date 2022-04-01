@@ -171,9 +171,9 @@ int database::createPosition(const string &id, const string &symbol, int amount,
          << ";";
     W.exec(sql2.str());
     W.commit();
-  //return 1;
+    // return 1;
   }
-return 1;
+  return 1;
 }
 
 int database::updateAccount(const string &id, double balance, double price,
@@ -225,9 +225,13 @@ int database::createOpen(string id, double price, int amount, string symbol,
     stringstream sql_seller;
     work N4(*C);
     sql_seller << "SELECT AMOUNT FROM POSITION_TB WHERE ACCOUNT_ID=" << id
-               << " FOR UPDATE;";
+               << " AND SYMBOL=" << N4.quote(symbol) << " FOR UPDATE;";
     result R(N4.exec(sql_seller.str()));
     N4.commit();
+    if (R.size() == 0) {
+      cerr << "Thereis no such symbol in the account" << endl;
+      return -1;
+    }
     int share = -(R[0]["AMOUNT"].as<int>());
     if (amount > share) {
       int remain = amount - share;
@@ -256,21 +260,23 @@ int database::createOpen(string id, double price, int amount, string symbol,
   result R(W.exec(sql.str()));
   W.commit();
 
-    work N(*C);
+  work N(*C);
   stringstream sql_find;
   sql_find << "SELECT OPEN_ID FROM OPEN_TB WHERE OPEN_TIME="
            << to_string(openTime) << " FOR UPDATE;";
 
   result R3(N.exec(sql_find));
-  int open_id = R3[R3.size()-1]["OPEN_ID"].as<int>();
+
+  int open_id = R3[R3.size() - 1]["OPEN_ID"].as<int>();
   N.commit();
+  matchOneOrder(C, to_string(open_id));
   return open_id;
 }
 
 // match a transaction
-bool database::matchOneOrder(connection *C, const string &open_id) {
+vector<response> database::matchOneOrder(connection *C, const string &open_id) {
   work W(*C);
-
+  vector<response> new_vec;
   // get the information of the account that should be matched
   stringstream sql2;
   sql2 << "SELECT BALANCE, "
@@ -297,14 +303,14 @@ bool database::matchOneOrder(connection *C, const string &open_id) {
             "OPEN_TB, USER_TB WHERE "
             "USER_TB.ACCOUNT_ID=OPEN_TB.ACCOUNT_ID AND "
             "OPEN_TB.ACCOUNT_ID !="
-         << account_id << " AND TRAN_TYPE=" << 2 << " AND PRICE<" << price
+         << account_id << " AND TRAN_TYPE=" << 2 << " AND PRICE<=" << price
          << " AND SYMBOL=" << W.quote(symbol)
          << " ORDER BY PRICE ASC FOR UPDATE;";
     result R3(W.exec(sql3.str()));
     int num = R3.size();
     if (num == 0) {
       cout << "There is no matching order!" << endl;
-      return false;
+      return new_vec;
     }
     W.commit();
     // all the orders that match
@@ -339,6 +345,13 @@ bool database::matchOneOrder(connection *C, const string &open_id) {
         int exe_id = addToExecuted(
             to_string(open_id), to_string(sell_open_id), to_string(account_id),
             to_string(sell_account_id), tran_price, amount, symbol, C);
+        response cancel_res;
+        cancel_res.executed = true;
+        cancel_res.shares_e = to_string(amount);
+        cancel_res.price_e = to_string(tran_price);
+        time_t curr_time = time(NULL);
+        cancel_res.time_e = to_string(curr_time);
+        new_vec.push_back(cancel_res);
         break;
       } else if (amount > sell_amount) {
         amount = amount - sell_amount;
@@ -359,6 +372,13 @@ bool database::matchOneOrder(connection *C, const string &open_id) {
         int exe_id = addToExecuted(
             to_string(open_id), to_string(sell_open_id), to_string(account_id),
             to_string(sell_account_id), tran_price, sell_amount, symbol, C);
+        response cancel_res;
+        cancel_res.executed = true;
+        cancel_res.shares_e = to_string(sell_amount);
+        cancel_res.price_e = to_string(tran_price);
+        time_t curr_time = time(NULL);
+        cancel_res.time_e = to_string(curr_time);
+        new_vec.push_back(cancel_res);
         continue;
         // update the transaction table, set buyer's executed_id
       } else {
@@ -375,6 +395,13 @@ bool database::matchOneOrder(connection *C, const string &open_id) {
         int exe_id = addToExecuted(
             to_string(open_id), to_string(sell_open_id), to_string(account_id),
             to_string(sell_account_id), tran_price, sell_amount, symbol, C);
+        response cancel_res;
+        cancel_res.executed = true;
+        cancel_res.shares_e = to_string(sell_amount);
+        cancel_res.price_e = to_string(tran_price);
+        time_t curr_time = time(NULL);
+        cancel_res.time_e = to_string(curr_time);
+        new_vec.push_back(cancel_res);
         break;
       }
     }
@@ -393,13 +420,13 @@ bool database::matchOneOrder(connection *C, const string &open_id) {
             "OPEN_TB, USER_TB WHERE "
             "USER_TB.ACCOUNT_ID=OPEN_TB.ACCOUNT_ID AND "
             "OPEN_TB.ACCOUNT_ID !="
-         << account_id << " AND TRAN_TYPE=" << 1 << " AND PRICE>" << price
+         << account_id << " AND TRAN_TYPE=" << 1 << " AND PRICE>=" << price
          << " AND SYMBOL=" << W.quote(symbol)
          << " ORDER BY PRICE DESC FOR UPDATE;";
     result R3(W.exec(sql3.str()));
     int num = R3.size();
     if (num == 0) {
-      return false;
+      return new_vec;
     }
     W.commit();
     // iterate through all the buy orders
@@ -439,6 +466,13 @@ bool database::matchOneOrder(connection *C, const string &open_id) {
             addToExecuted(to_string(buy_open_id), to_string(open_id),
                           to_string(buy_account_id), to_string(account_id),
                           tran_price, amount, symbol, C);
+        response cancel_res;
+        cancel_res.executed = true;
+        cancel_res.shares_e = to_string(amount);
+        cancel_res.price_e = to_string(tran_price);
+        time_t curr_time = time(NULL);
+        cancel_res.time_e = to_string(curr_time);
+        new_vec.push_back(cancel_res);
         break;
       } else if (amount > buy_amount) {
         amount = amount - buy_amount;
@@ -461,6 +495,13 @@ bool database::matchOneOrder(connection *C, const string &open_id) {
             addToExecuted(to_string(buy_open_id), to_string(open_id),
                           to_string(buy_account_id), to_string(account_id),
                           tran_price, buy_amount, symbol, C);
+        response cancel_res;
+        cancel_res.executed = true;
+        cancel_res.shares_e = to_string(buy_amount);
+        cancel_res.price_e = to_string(tran_price);
+        time_t curr_time = time(NULL);
+        cancel_res.time_e = to_string(curr_time);
+        new_vec.push_back(cancel_res);
         continue;
         // update the transaction table, set buyer's executed_id
       } else {
@@ -478,12 +519,18 @@ bool database::matchOneOrder(connection *C, const string &open_id) {
             addToExecuted(to_string(buy_open_id), to_string(open_id),
                           to_string(buy_account_id), to_string(account_id),
                           tran_price, buy_amount, symbol, C);
+        response cancel_res;
+        cancel_res.executed = true;
+        cancel_res.shares_e = to_string(buy_amount);
+        cancel_res.price_e = to_string(tran_price);
+        time_t curr_time = time(NULL);
+        cancel_res.time_e = to_string(curr_time);
+        new_vec.push_back(cancel_res);
         break;
       }
     }
   }
-
-  return 1;
+  return new_vec;
 }
 
 vector<response> database::cancel(string &acc_id, string &id, connection *C) {
@@ -567,7 +614,7 @@ vector<response> database::queryDB(string user_id, string query_id,
          "OPEN_ID ="
       << query_id << " AND ACCOUNT_ID =" << user_id << " FOR UPDATE;";
   result R(N.exec(sql));
-  
+
   for (result::const_iterator c = R.begin(); c != R.end(); c++) {
     response h;
     h.open = 1;
@@ -581,7 +628,7 @@ vector<response> database::queryDB(string user_id, string query_id,
        "ACCOUNT_ID ="
     << user_id << " AND CANCEL_ID =" << query_id << " FOR UPDATE;";
   result P(N.exec(m));
-   for (result::const_iterator c = P.begin(); c != P.end(); c++) {
+  for (result::const_iterator c = P.begin(); c != P.end(); c++) {
     //    a.cancel = true;
     response h;
     h.cancel = 1;

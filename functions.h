@@ -31,7 +31,7 @@ public:
                     connection *C);
   int createOpen(string id, double price, int amount, string symbol, int type,
                  connection *C);
-  bool matchOneOrder(connection *C, const string &tran_id);
+  vector<response> matchOneOrder(connection *C, const string &tran_id);
   int updateOpenAmount(const string &open_id, const string &id, int new_amount,
                        connection *C);
   int updateTranEXEOnly(const string &id, int exe_id, connection *C);
@@ -54,9 +54,9 @@ public:
   //  int cancel(string &id, connection *C);
   //  void updateTranCancel(string & id, string cancel_id,connection *C);
   //<<<<<<< HEAD
-	 vector<response> queryDB(string user_id, string tran_id2,connection *C);   
+  vector<response> queryDB(string user_id, string tran_id2, connection *C);
   //=======
-  //response queryDB(string user_id, string tran_id2, connection *C);
+  // response queryDB(string user_id, string tran_id2, connection *C);
   //>>>>>>> 925fc0132e4c3c3a39c7bf32967612cb4c76cd9d
 };
 
