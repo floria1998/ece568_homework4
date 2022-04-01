@@ -1,9 +1,9 @@
+#include "server1.h"
 #include <cstring>
 #include <fstream>
 #include <iostream>
 #include <netdb.h>
 #include <string>
-#include "server1.h"
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -15,9 +15,9 @@ int main(int argc, char *argv[]) {
   struct addrinfo host_info;
   struct addrinfo *host_info_list;
 
-  const char * hostname = "vcm-25297.vm.duke.edu";
-  const char * port     = "12345";
-  
+  const char *hostname = "vcm-24627.vm.duke.edu";
+  const char *port = "12345";
+
   memset(&host_info, 0, sizeof(host_info));
   host_info.ai_family = AF_UNSPEC;
   host_info.ai_socktype = SOCK_STREAM;
@@ -27,10 +27,7 @@ int main(int argc, char *argv[]) {
     cerr << "Error: cannot get address info for host" << endl;
     cerr << "  (" << hostname << "," << port << ")" << endl;
     return -1;
-
-  } 
-
-
+  }
 
   socket_fd = socket(host_info_list->ai_family, host_info_list->ai_socktype,
                      host_info_list->ai_protocol);
@@ -38,9 +35,8 @@ int main(int argc, char *argv[]) {
     cerr << "Error: cannot create socket" << endl;
     cerr << "  (" << hostname << "," << port << ")" << endl;
     return -1;
+  }
 
-  } 
-  
   cout << "Connecting to " << hostname << " on port " << port << "..." << endl;
 
   status =
@@ -51,10 +47,8 @@ int main(int argc, char *argv[]) {
     cerr << "  (" << hostname << "," << port << ")" << endl;
     return -1;
   }
-   
-       
-  
-   string m = "";
+
+  string m = "";
   ifstream input_file(argv[1]);
 
   if (!input_file.is_open()) {
