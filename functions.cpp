@@ -145,7 +145,7 @@ int database::createPosition(const string &id, const string &symbol, int amount,
                              connection *C) {
   bool account_exist = checkAccountExist(id, C);
   if (account_exist == false) {
-    return 0;
+    return -1;
   }
   work W(*C);
   string sql = "SELECT * FROM POSITION_TB WHERE POSITION_TB.ACCOUNT_ID=" + id +
@@ -161,7 +161,7 @@ int database::createPosition(const string &id, const string &symbol, int amount,
 
     W.exec(sql2.str());
     W.commit();
-    return 1;
+    // return 1;
   } else {
     int myamount = R[0]["AMOUNT"].as<int>() + amount;
     stringstream sql2;
@@ -170,8 +170,9 @@ int database::createPosition(const string &id, const string &symbol, int amount,
          << ";";
     W.exec(sql2.str());
     W.commit();
-    return 1;
+  //return 1;
   }
+return 1;
 }
 
 int database::updateAccount(const string &id, double balance, double price,
@@ -187,12 +188,12 @@ int database::updateAccount(const string &id, double balance, double price,
   return new_balance;
 }
 
-int database::createOpen(string id, double price, int amount, string symbol,
+string database::createOpen(string id, double price, int amount, string symbol,
                          int type, connection *C) {
   // place the buyer's order
   bool exist = checkAccountExist(id, C);
   if (exist == false) {
-    return -1;
+    return "-1";
   }
   if (type == 1) {
     double deduct = price * (double)amount;
@@ -200,6 +201,7 @@ int database::createOpen(string id, double price, int amount, string symbol,
     work N3(*C);
     sql_buyer << "SELECT BALANCE FROM USER_TB WHERE ACCOUNT_ID=" << id << ";";
     result R(N3.exec(sql_buyer.str()));
+
     N3.commit();
     double balance = R[0]["BALANCE"].as<double>();
     if (balance > deduct) {
@@ -212,7 +214,7 @@ int database::createOpen(string id, double price, int amount, string symbol,
       W4.commit();
     } else {
       cerr << "There is not enough balance in user's account" << endl;
-      return -1;
+      return "-1";
     }
   }
   // place the seller's order
@@ -235,7 +237,7 @@ int database::createOpen(string id, double price, int amount, string symbol,
       W5.commit();
     } else {
       cerr << "There is not enough share in seller's account" << endl;
-      return -1;
+      return "-1";
     }
   }
   // insert the order into open table
@@ -259,7 +261,7 @@ int database::createOpen(string id, double price, int amount, string symbol,
   int open_id = R3[0]["OPEN_ID"].as<int>();
   N.commit();
 
-  return open_id;
+  return to_string(open_id);
 }
 
 // match a transaction

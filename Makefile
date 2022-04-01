@@ -13,8 +13,8 @@ client: client.cpp
 test:response.h functions.h functions.cpp main.cpp
 	$(CC) $(CFLAGS) -o test response.h functions.h functions.cpp main.cpp $(EXTRAFLAGS) 
 
-server: tinyxml2.cpp server.cpp parser.cpp functions.h functions.cpp
-	$(CC) $(CFLAGS) -o server tinyxml2.cpp server.cpp parser.cpp functions.h functions.cpp $(EXTRAFLAGS)
+server: tinyxml2.cpp server.cpp parser.cpp functions.h functions.cpp server1.h server1.cpp
+	$(CC) $(CFLAGS) -o server tinyxml2.cpp server.cpp parser.cpp functions.h functions.cpp server1.h server1.cpp $(EXTRAFLAGS)
 
 clean:
 	rm -f *~ *.o test

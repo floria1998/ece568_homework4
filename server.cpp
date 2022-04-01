@@ -5,79 +5,14 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <mutex>
+#include <thread>
+#include "server1.h"
 
 using namespace std;
 using namespace tinyxml2;
 
 int main(int argc, char *argv[]) {
-  int status;
-  int socket_fd;
-  struct addrinfo host_info;
-  struct addrinfo *host_info_list;
-  const char *hostname = NULL;
-  const char *port = "12345";
-
-  memset(&host_info, 0, sizeof(host_info));
-  host_info.ai_family = AF_UNSPEC;
-  host_info.ai_socktype = SOCK_STREAM;
-  host_info.ai_flags = AI_PASSIVE;
-
-  status = getaddrinfo(hostname, port, &host_info, &host_info_list);
-  if (status != 0) {
-    cerr << "Error: cannot get address info for host" << endl;
-    cerr << "  (" << hostname << "," << port << ")" << endl;
-    return -1;
-  }
-
-  socket_fd = socket(host_info_list->ai_family, host_info_list->ai_socktype,
-                     host_info_list->ai_protocol);
-  if (socket_fd == -1) {
-    cerr << "Error: cannot create socket" << endl;
-    cerr << "  (" << hostname << "," << port << ")" << endl;
-    return -1;
-  }
-
-  int yes = 1;
-  status = setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
-  status = bind(socket_fd, host_info_list->ai_addr, host_info_list->ai_addrlen);
-  if (status == -1) {
-    cerr << "Error: cannot bind socket" << endl;
-    cerr << "  (" << hostname << "," << port << ")" << endl;
-    return -1;
-  }
-
-  status = listen(socket_fd, 100);
-  if (status == -1) {
-    cerr << "Error: cannot listen on socket" << endl;
-    cerr << "  (" << hostname << "," << port << ")" << endl;
-    return -1;
-  }
-
-  cout << "Waiting for connection on port " << port << endl;
-  struct sockaddr_storage socket_addr;
-  socklen_t socket_addr_len = sizeof(socket_addr);
-  int client_connection_fd;
-  client_connection_fd =
-      accept(socket_fd, (struct sockaddr *)&socket_addr, &socket_addr_len);
-  if (client_connection_fd == -1) {
-    cerr << "Error: cannot accept connection on socket" << endl;
-    return -1;
-  } // if
-
-  char buffer[65535];
-
-  recv(client_connection_fd, buffer, 65535,
-       0); // receive information from client
-  buffer[65535] = 0;
-
-  parser p;
-  string m1 = buffer;
-  string x = m1.substr(m1.find("\n") + 1);
-  const char *m = x.c_str();
-
-  string top = p.parsexmlTop(m); // parse the xml
-
-  // start sql
   connection *C;
   database dataBase;
   dataBase.openDatabase(&C);
@@ -88,7 +23,26 @@ int main(int argc, char *argv[]) {
   dataBase.dropTable(C, "EXECUTED_TB");
   dataBase.dropTable(C, "CANCEL_TB");
   dataBase.createTable(C, "createTable.sql");
-  
+  int socket_fd = get_sock();
+  // cout << "Waiting for connection on port " << port << endl;
+
+   
+   string ip;
+   int client_connection_fd = accept_sock(socket_fd,&ip); 
+    
+   char buffer[65535];
+
+   recv(client_connection_fd, buffer, 65535,0); // receive information from client
+   buffer[65535] = 0;
+
+   parser p;
+   string m1 = buffer;
+   string x = m1.substr(m1.find("\n") + 1);
+   const char *m = x.c_str();
+
+   string top = p.parsexmlTop(m); // parse the xml
+
+  // start sql  
    string res;
    if (top == "create")
    {
@@ -97,7 +51,6 @@ int main(int argc, char *argv[]) {
      docNew->InsertFirstChild(declaration);
      XMLElement * root = docNew->NewElement("results");
      docNew->InsertEndChild(root);
-
      vector<account> newAccount = p.createAccount(m);
       for (int i = 0;i<newAccount.size();i++)
      { 
@@ -118,12 +71,12 @@ int main(int argc, char *argv[]) {
                 string one = newAccount[i].account_id;
 		type->SetAttribute("id",one.c_str());
 		root->InsertEndChild(type);
-	   
-	     }
+	      }
        
 	 }
        else if (newAccount[i].position==1)
 	 {
+	   
 	   int m1 = stoi(newAccount[i].shares);
 	   if (dataBase.createPosition(newAccount[i].account_id,newAccount[i].symbol,m1,C)==0)
 	    {
@@ -153,7 +106,7 @@ int main(int argc, char *argv[]) {
   }
   else if (top == "transactions")
   {
-       
+    dataBase.createAccount(200,"1234",C);
        XMLDocument * doc = new XMLDocument();
        doc->Parse(m);
        XMLElement * rootElement = doc->RootElement(); //get transaction
@@ -173,18 +126,26 @@ int main(int argc, char *argv[]) {
 	   string symbol = child->Attribute("sym");
 	   string amount = child->Attribute("amount");	   
 	   string limit = child->Attribute("limit");
-	    
+	   int nn = stoi(amount); 
 	   int type;
-	   amount[0]=='-'?type=2:type=1;
-	   int transId =0;
-	   transId = dataBase.createOpen(account_id,stod(limit),stoi(amount),symbol,type,C);
-	     if (transId == -1)
+	   // amount[0]=='-'?type=2:type=1;
+	   if (nn<0)
+	     {
+	       type = 2;
+	     }
+	   else
+	     {
+	       type = 1;
+	     }
+	   // int transId =0;
+	     string transId = dataBase.createOpen(account_id,stod(limit),stoi(amount),symbol,type,C);
+	     if (transId == "-1")
 	     {
 	         ordr = docNew->NewElement("error");
 		 ordr->SetAttribute("sym",child->Attribute("sym"));
 		 ordr->SetAttribute("amount",child->Attribute("amount"));
 		 ordr->SetAttribute("limit",child->Attribute("limit"));
-		 ordr->SetText("Invalid balance number or share number");
+		 ordr->SetText("Invalid balance number or share number or account number");
 	         root->InsertEndChild(ordr);
 	      
 	     }
@@ -203,9 +164,6 @@ int main(int argc, char *argv[]) {
 	 }    
        else if (n == "query")
 	 {
-	   // dataBase.createAccount(200, "1234", C);
-	   //dataBase.createPosition("1234", "BOA", 100, C);
-	   //dataBase.createOpen("1234", 24, 2, "BOA", 1, C);
 	   string open_id = child->Attribute("id");
 	   vector<response> res =dataBase.queryDB(account_id,open_id,C);
 	   ordr = docNew->NewElement("status");
@@ -240,15 +198,12 @@ int main(int argc, char *argv[]) {
 
 	       ordr->InsertEndChild(child1); 
 	     }
-	   root->InsertEndChild(ordr);
-	 }
+	      root->InsertEndChild(ordr);
+	  }
        else if (n == "cancel")
 	 {
 	   string open_id = child->Attribute("id");
 	   vector<response> res =dataBase.cancel(account_id,open_id,C);
-	   ordr = docNew->NewElement("status");
-	   string open_id = child->Attribute("id");
-	   vector<response> res =dataBase.queryDB(account_id,open_id,C);
 	   ordr = docNew->NewElement("status");
 	    for (int i = 0;i<res.size();i++)
 	     {
@@ -277,12 +232,14 @@ int main(int argc, char *argv[]) {
 	 }
        else
 	 {
+	   
 	   ordr = docNew->NewElement("error");
 	   ordr->SetText("Invalid tag");
+	   root->InsertEndChild(ordr);
 	 }
- }
+       }
        
-        XMLPrinter printer;
+         XMLPrinter printer;
         docNew->Print(&printer);
         res = printer.CStr(); 
     }
@@ -291,9 +248,8 @@ int main(int argc, char *argv[]) {
   }
 
    const char *mess = res.c_str();
-  send(client_connection_fd, mess, strlen(mess), 0);
-  freeaddrinfo(host_info_list);
-  close(socket_fd);
+   send(client_connection_fd, mess, strlen(mess), 0);
+    close(socket_fd);
 
   return 0;
 }

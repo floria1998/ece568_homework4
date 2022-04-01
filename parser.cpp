@@ -33,7 +33,6 @@ string parser::createSuccess(string id,string sym,int great)
   XMLElement * root = doc.NewElement("results");
   doc.InsertEndChild(root);
   XMLElement * type = doc.NewElement("created");
-  // type->SetText("Success!");
   const char * id1 = id.c_str();
   type->SetAttribute("id",id1);
   root->InsertEndChild(type);
@@ -105,28 +104,35 @@ vector<account> parser::createAccount(const char *buffer)
   for (XMLElement * child = rootElement->FirstChildElement();child;child=child->NextSiblingElement())
   {
     
-      account m;
+    //    account m;
       //  m.account_id = child->Attribute("id");
       string n = child->Value();
       //  cout<<n<<endl;
        if (n =="account")
-	{
+	 { account m;
 	   m.account1 = 1;
 	   m.account_id = child->Attribute("id");
 	   m.balance = child->Attribute("balance");
+	   res.push_back(m);
 	}
        
        if (n == "symbol")
 	{
-	  m.position = 1;
-	  // XMLElement * brother = rootElement->FirstChildElement("symbol");
-	  m.symbol = child->Attribute("sym");
-	  XMLElement * share1 = child->FirstChildElement("account");
-	  m.account_id = share1->Attribute("id");
-	  m.shares = share1->GetText();
-	  cout<<"shares:"<<m.shares<<endl;
+	  string symbol = child->Attribute("sym");
+	  for (XMLElement * cc = child->FirstChildElement();cc;cc = cc->NextSiblingElement())
+	    {
+	      // cout<< cc->Value() <<endl;
+	      account m;
+	      m.position = 1;
+	      m.symbol = symbol;
+	      // XMLElement * share1 = child->FirstChildElement("account");
+	      m.account_id = cc->Attribute("id");
+	      m.shares = cc->GetText();
+	  // cout<<"shares:"<<m.shares<<endl;
+	      res.push_back(m);
+	    }
 	}
-       res.push_back(m);
+       // res.push_back(m);
      }
   return res;
 }

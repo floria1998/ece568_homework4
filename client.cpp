@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <fstream>
 #include <string>
-
+#include "server1.h"
 using namespace std;
 
 int main(int argc, char *argv[])
@@ -14,8 +14,8 @@ int main(int argc, char *argv[])
   int socket_fd;
   struct addrinfo host_info;
   struct addrinfo *host_info_list;
-  const char *hostname = "vcm-25297.vm.duke.edu";
-  const char *port     = "12345";
+  const char * hostname = "vcm-25297.vm.duke.edu";
+  const char * port     = "12345";
   
   memset(&host_info, 0, sizeof(host_info));
   host_info.ai_family   = AF_UNSPEC;
@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
     cerr << "Error: cannot get address info for host" << endl;
     cerr << "  (" << hostname << "," << port << ")" << endl;
     return -1;
-  } //if
+  } 
 
   socket_fd = socket(host_info_list->ai_family, 
 		     host_info_list->ai_socktype, 
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     cerr << "Error: cannot create socket" << endl;
     cerr << "  (" << hostname << "," << port << ")" << endl;
     return -1;
-  } //if
+  } 
   
   cout << "Connecting to " << hostname << " on port " << port << "..." << endl;
   
@@ -45,15 +45,18 @@ int main(int argc, char *argv[])
     cerr << "Error: cannot connect to socket" << endl;
     cerr << "  (" << hostname << "," << port << ")" << endl;
     return -1;
-  } //if
+  } 
 
-  // const char *message = "";
-  string m = "";
+   
+       
+  
+   string m = "";
   ifstream input_file(argv[1]);
   if (!input_file.is_open())
-    {
+  {
       cerr<<"Could not open test file"<<endl;
-    }
+  }
+  
   string line;
   while (getline(input_file,line))
   {
