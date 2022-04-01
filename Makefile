@@ -1,24 +1,13 @@
-TARGETS=client server test
-EXTRAFLAGS = -lpqxx -lpq
-CC = g++
-CFLAGS = -O3
-all: $(TARGETS)
+CC=g++
+CFLAGs=-03
+EXTRAFLAGS=-pthread
+
+.Phony: all clean
+
+all: concurrency
+
+concurrency: testConcurrency.cpp
+	$(CC) $(CFLAGS) -o concurrency testConcurrency.cpp $(EXTRAFLAGS)
 
 clean:
-	rm -f $(TARGETS)
-
-client: client.cpp
-	g++ -g -o $@ $<
-
-test:response.h functions.h functions.cpp main.cpp
-	$(CC) $(CFLAGS) -o test response.h functions.h functions.cpp main.cpp $(EXTRAFLAGS)
-
-server: tinyxml2.cpp server.cpp parser.cpp functions.h functions.cpp server1.h server1.cpp
-	$(CC) $(CFLAGS) -o server tinyxml2.cpp server.cpp parser.cpp functions.h functions.cpp server1.h server1.cpp $(EXTRAFLAGS)
-
-
-clean:
-	rm -f *~ *.o test
-
-clobber:
-	rm -f *~ *.o
+	rm -f concurrency *~
