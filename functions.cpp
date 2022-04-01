@@ -54,7 +54,7 @@ void database::dropTable(connection *C, string table) {
 
 bool database::checkAccountExist(const string &id, connection *C) {
   work W(*C);
-  string sql = "SELECT * FROM USER_TB WHERE ACCOUNT_ID=" + id + ";";
+  string sql = "SELECT * FROM USER_TB WHERE ACCOUNT_ID=" + id + " FOR UPDATE;";
   result R(W.exec(sql));
   W.commit();
   if (R.size() == 0) {
@@ -93,7 +93,7 @@ int database::addToExecuted(const string &buy_id, const string &sell_id,
   nontransaction N(*C);
   stringstream sql2;
   sql2 << "SELECT EXECUTED_ID FROM EXECUTED_TB WHERE EXECUTED_TIME="
-       << curr_time << ";";
+       << curr_time << " FOR UPDATE;";
   result R1(N.exec(sql2.str()));
   int executed_id = R1[0]["EXECUTED_ID"].as<int>();
   return executed_id;
@@ -114,7 +114,8 @@ int database::updateOpenAmount(const string &open_id, const string &id,
 int database::payBackBuyer(int id, double toadd, connection *C) {
   work W(*C);
   stringstream sql1;
-  sql1 << "SELECT BALANCE FROM USER_TB WHERE ACCOUNT_ID=" << id << ";";
+  sql1 << "SELECT BALANCE FROM USER_TB WHERE ACCOUNT_ID=" << id
+       << " FOR UPDATE;";
   result R(W.exec(sql1.str()));
   double balance = R[0]["BALANCE"].as<double>();
   double newbalance = balance + toadd;
@@ -149,7 +150,7 @@ int database::createPosition(const string &id, const string &symbol, int amount,
   }
   work W(*C);
   string sql = "SELECT * FROM POSITION_TB WHERE POSITION_TB.ACCOUNT_ID=" + id +
-               " AND SYMBOL=" + W.quote(symbol) + ";";
+               " AND SYMBOL=" + W.quote(symbol) + " FOR UPDATE;";
   result R(W.exec(sql));
   int num = R.size();
 
@@ -192,13 +193,14 @@ int database::createOpen(string id, double price, int amount, string symbol,
   // place the buyer's order
   bool exist = checkAccountExist(id, C);
   if (exist == false) {
-    return -1;
+    return -2;
   }
   if (type == 1) {
     double deduct = price * (double)amount;
     stringstream sql_buyer;
     work N3(*C);
-    sql_buyer << "SELECT BALANCE FROM USER_TB WHERE ACCOUNT_ID=" << id << ";";
+    sql_buyer << "SELECT BALANCE FROM USER_TB WHERE ACCOUNT_ID=" << id
+              << " FOR UPDATE;";
     result R(N3.exec(sql_buyer.str()));
     N3.commit();
     double balance = R[0]["BALANCE"].as<double>();
@@ -220,7 +222,7 @@ int database::createOpen(string id, double price, int amount, string symbol,
     stringstream sql_seller;
     work N4(*C);
     sql_seller << "SELECT AMOUNT FROM POSITION_TB WHERE ACCOUNT_ID=" << id
-               << ";";
+               << " FOR UPDATE;";
     result R(N4.exec(sql_seller.str()));
     N4.commit();
     int share = -(R[0]["AMOUNT"].as<int>());
@@ -254,7 +256,7 @@ int database::createOpen(string id, double price, int amount, string symbol,
   work N(*C);
   stringstream sql_find;
   sql_find << "SELECT OPEN_ID FROM OPEN_TB WHERE OPEN_TIME="
-           << to_string(openTime) << ";";
+           << to_string(openTime) << " FOR UPDATE;";
   result R3(N.exec(sql_find));
   int open_id = R3[0]["OPEN_ID"].as<int>();
   N.commit();
@@ -272,7 +274,7 @@ bool database::matchOneOrder(connection *C, const string &open_id) {
           "OPEN_TB.ACCOUNT_ID,AMOUNT,PRICE,SYMBOL,TRAN_TYPE,OPEN_TIME FROM "
           "OPEN_TB, USER_TB "
           "WHERE OPEN_TB.ACCOUNT_ID=USER_TB.ACCOUNT_ID AND OPEN_ID="
-       << open_id << ";";
+       << open_id << " FOR UPDATE;";
   result R2(W.exec(sql2.str()));
   double balance = R2[0]["BALANCE"].as<double>();
   int account_id = R2[0]["ACCOUNT_ID"].as<int>();
@@ -293,7 +295,8 @@ bool database::matchOneOrder(connection *C, const string &open_id) {
             "USER_TB.ACCOUNT_ID=OPEN_TB.ACCOUNT_ID AND "
             "OPEN_TB.ACCOUNT_ID !="
          << account_id << " AND TRAN_TYPE=" << 2 << " AND PRICE<" << price
-         << " AND SYMBOL=" << W.quote(symbol) << " ORDER BY PRICE ASC;";
+         << " AND SYMBOL=" << W.quote(symbol)
+         << " ORDER BY PRICE ASC FOR UPDATE;";
     result R3(W.exec(sql3.str()));
     int num = R3.size();
     if (num == 0) {
@@ -388,7 +391,8 @@ bool database::matchOneOrder(connection *C, const string &open_id) {
             "USER_TB.ACCOUNT_ID=OPEN_TB.ACCOUNT_ID AND "
             "OPEN_TB.ACCOUNT_ID !="
          << account_id << " AND TRAN_TYPE=" << 1 << " AND PRICE>" << price
-         << " AND SYMBOL=" << W.quote(symbol) << " ORDER BY PRICE DESC;";
+         << " AND SYMBOL=" << W.quote(symbol)
+         << " ORDER BY PRICE DESC FOR UPDATE;";
     result R3(W.exec(sql3.str()));
     int num = R3.size();
     if (num == 0) {
@@ -485,7 +489,7 @@ vector<response> database::cancel(string &acc_id, string &id, connection *C) {
   stringstream sql;
   sql << "SELECT OPEN_ID,SYMBOL,ACCOUNT_ID,TRAN_TYPE,AMOUNT,PRICE FROM "
          "OPEN_TB WHERE OPEN_ID="
-      << W.quote(id) << ";";
+      << W.quote(id) << " FOR UPDATE;";
   result R(W.exec(sql));
   if (R.size() == 0) {
     return newvec;
@@ -531,7 +535,7 @@ vector<response> database::cancel(string &acc_id, string &id, connection *C) {
 
   sql3 << "SELECT EXECUTED_TB.AMOUNT,EXECUTED_TB.PRICE,EXECUTED_TIME FROM "
           "CANCEL_TB, EXECUTED_TB WHERE BUY_ID="
-       << W3.quote(id) << " OR SELLER_ID=" << W3.quote(id) << ";";
+       << W3.quote(id) << " OR SELLER_ID=" << W3.quote(id) << " FOR UPDATE;";
   result R3(W3.exec(sql3));
   W3.commit();
   for (result::const_iterator k = R3.begin(); k != R3.end(); k++) {
@@ -558,7 +562,7 @@ vector<response> database::queryDB(string user_id, string query_id,
   sql << "SELECT AMOUNT FROM "
          "OPEN_TB WHERE "
          "OPEN_ID ="
-      << query_id << " AND ACCOUNT_ID =" << user_id << ";";
+      << query_id << " AND ACCOUNT_ID =" << user_id << " FOR UPDATE;";
   result R(N.exec(sql));
   for (result::const_iterator c = R.begin(); c != R.end(); c++) {
     response h;
@@ -571,7 +575,7 @@ vector<response> database::queryDB(string user_id, string query_id,
   m << "SELECT AMOUNT,CANCEL_TIME FROM "
        "CANCEL_TB WHERE "
        "ACCOUNT_ID ="
-    << user_id << " AND CANCEL_ID =" << query_id << ";";
+    << user_id << " AND CANCEL_ID =" << query_id << " FOR UPDATE;";
   result P(N.exec(m));
   //    a.cancel = true;
   for (result::const_iterator c = P.begin(); c != P.end(); c++) {
@@ -588,7 +592,7 @@ vector<response> database::queryDB(string user_id, string query_id,
   x << "SELECT AMOUNT,PRICE,EXECUTED_TIME FROM "
        "EXECUTED_TB WHERE "
        "BUY_ID ="
-    << query_id << " OR SELL_ID =" << query_id << ";";
+    << query_id << " OR SELL_ID =" << query_id << " FOR UPDATE;";
   result M(N.exec(x));
   // a.open = true;
   for (result::const_iterator c = M.begin(); c != M.end(); c++) {

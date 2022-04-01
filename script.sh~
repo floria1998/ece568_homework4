@@ -1,0 +1,3 @@
+#!/bin/bash
+./client test1.xml
+./client test2.xml
