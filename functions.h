@@ -29,7 +29,7 @@ public:
 
   int updateAccount(const string &id, double balance, double price, int amount,
                     connection *C);
-  string createOpen(string id, double price, int amount, string symbol, int type,
+  int createOpen(string id, double price, int amount, string symbol, int type,
                  connection *C);
   bool matchOneOrder(connection *C, const string &tran_id);
   int updateOpenAmount(const string &open_id, const string &id, int new_amount,

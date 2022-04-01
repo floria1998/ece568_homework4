@@ -29,3 +29,4 @@
           <account id="4">1000</account>  
         </symbol>  
       </create>  
+
