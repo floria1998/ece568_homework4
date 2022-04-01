@@ -251,19 +251,19 @@ int database::createOpen(string id, double price, int amount, string symbol,
          "(ACCOUNT_ID,PRICE,AMOUNT,OPEN_TIME,SYMBOL,TRAN_TYPE) "
       << "VALUES (" << W.quote(id) << ", " << W.quote(to_string(price)) << ", "
       << W.quote(to_string(amount)) << ", " << W.quote(to_string(openTime))
-      << ", " << W.quote(symbol) << ", " << W.quote(to_string(type)) << ");";
+      << ", " << W.quote(symbol) << ", " << W.quote(to_string(type)) << "); ";
 
   result R(W.exec(sql.str()));
   W.commit();
 
-  work N(*C);
+    work N(*C);
   stringstream sql_find;
   sql_find << "SELECT OPEN_ID FROM OPEN_TB WHERE OPEN_TIME="
            << to_string(openTime) << " FOR UPDATE;";
-  result R3(N.exec(sql_find));
-  int open_id = R3[0]["OPEN_ID"].as<int>();
-  N.commit();
 
+  result R3(N.exec(sql_find));
+  int open_id = R3[R3.size()-1]["OPEN_ID"].as<int>();
+  N.commit();
   return open_id;
 }
 
@@ -567,6 +567,7 @@ vector<response> database::queryDB(string user_id, string query_id,
          "OPEN_ID ="
       << query_id << " AND ACCOUNT_ID =" << user_id << " FOR UPDATE;";
   result R(N.exec(sql));
+  
   for (result::const_iterator c = R.begin(); c != R.end(); c++) {
     response h;
     h.open = 1;
@@ -580,8 +581,7 @@ vector<response> database::queryDB(string user_id, string query_id,
        "ACCOUNT_ID ="
     << user_id << " AND CANCEL_ID =" << query_id << " FOR UPDATE;";
   result P(N.exec(m));
-  //    a.cancel = true;
-  for (result::const_iterator c = P.begin(); c != P.end(); c++) {
+   for (result::const_iterator c = P.begin(); c != P.end(); c++) {
     //    a.cancel = true;
     response h;
     h.cancel = 1;

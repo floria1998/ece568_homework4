@@ -2,6 +2,7 @@
 using namespace std;
 class response{
  public:
+  //  int noRecord;
   int open;
   string shares_o;
   
@@ -15,6 +16,8 @@ class response{
   string time_c;
 
   response(){
+    // noRecord = 0;
+        
     open = 0;
     shares_o = "";
 
