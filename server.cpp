@@ -1,5 +1,6 @@
 #include "functions.h"
 #include "parser.h"
+#include "server1.h"
 #include "thread_pool/threadpool.h"
 #include <cstring>
 #include <iostream>
@@ -34,7 +35,6 @@ vector<string> receiveInfo(int client_connection_fd)
 	 break;
        }
    
-     // cout<<finished<<endl;
        if (len!= 1)
 	{
 	  buffer[1000] = 0;
@@ -52,7 +52,7 @@ vector<string> receiveInfo(int client_connection_fd)
       }
       else if (buffer[0] == '\n' && len == 1)
       {
-	//cout<<number<<endl;
+	
 	  len = stoi(number);
 	  len+=3;
       }
@@ -63,43 +63,10 @@ vector<string> receiveInfo(int client_connection_fd)
 
 void responseClient(int client_connection_fd)
 {
+  connection *C;
   database dataBase;
-  connection * C;
   dataBase.openDatabase(&C);
-  cout<<"a"<<endl;
-   vector<string> ans = receiveInfo(client_connection_fd);
-   /* vector<string> ans;
-   int finished = 1;
-   int len=1;
-   string number = "";
-   char buffer[1001];
-   memset(buffer,0,1001);
-   string request = "";
-   while(recv(client_connection_fd, buffer, len, 0)>0)    
-   {
-        if (len!= 1)
-	{
-	  buffer[1000] = 0;
-	  string m(buffer,buffer+len);
-	  len = 1;
-	  cout<<m<<endl;
-	  ans.push_back(m);
-	  number = "";
-	  memset(buffer,0,1001);
-	}
-      	else if (buffer[0]!='\n' &&  len == 1)
-      {
-	  number = number + buffer[0];
-	  //  cout<<buffer[0]<<endl;
-      }
-      else if (buffer[0] == '\n' && len == 1)
-      {
-	//cout<<number<<endl;
-	  len = stoi(number);
-	  len+=3;
-      }
-     	  
-      }*/
+  vector<string> ans = receiveInfo(client_connection_fd);
 
   for (int i = 0;i<ans.size();i++)
     {
