@@ -19,7 +19,22 @@ mutex data;
 
 using namespace std;
 using namespace tinyxml2;
-
+vector<string> parseXml(int total,string totalRequest)
+{
+  vector<string> res;
+  int x = 0;
+  while (x<total)
+  {
+    int y = totalRequest.find("\n",x);    
+    string number = totalRequest.substr(x,y);
+    string xml = totalRequest.substr(y,stoi(number)+2);
+    res.push_back(xml);
+    x = y;
+    x = x+stoi(number)+2;
+  }
+  return res;
+}
+  
 vector<string> receiveInfo(int client_connection_fd)  
 {
    int total = 0;
@@ -28,22 +43,18 @@ vector<string> receiveInfo(int client_connection_fd)
    string totalRequest="";
     while(1)
     {
-     char msg[65536]={0};
-     res_length = recv(client_connection_fd,msg,65536,0);
-     cout<<msg<<endl;
-     if (res_length<=0)
+      char msg[65536]={0};
+      res_length = recv(client_connection_fd,msg,sizeof(msg),0);
+      if (res_length<=3)
       {
 	 break;
       }
      string msg_str(msg,res_length);
      totalRequest.append(msg_str);
-     cout<<totalRequest<<endl;
-     total+=res_length;
-     
-     }
+     total+=res_length;   
+   }
 
-   cout<<totalRequest<<endl;
-	  
+   ans = parseXml(total,totalRequest);
    return ans;
 }
 
@@ -52,10 +63,19 @@ void responseClient(int client_connection_fd)
   connection *C;
   database dataBase;
   dataBase.openDatabase(&C);
-  vector<string> ans = receiveInfo(client_connection_fd);
-  cout<<"ans"<<ans.size()<<endl;
+  // cout<<"A"<<endl;
+  // cout<<"running on thread:" <<gettid()<<endl;
+   vector<string> ans = receiveInfo(client_connection_fd);
+   /* int res_length = 0;
+      string totalRequest="";*/
+   for (int i = 0;i<ans.size();i++)
+{
+  cout<<i<<endl;
+  cout<<ans[i]<<endl;
+}/*
   for (int i = 0;i<ans.size();i++)
-    {
+  {
+    //cout<<i<<endl;
     parser p;
     string m1 = ans[i];
     string x = m1.substr(m1.find("\n") + 1);
@@ -67,14 +87,11 @@ void responseClient(int client_connection_fd)
       XMLDeclaration *declaration = docNew->NewDeclaration();
       docNew->InsertFirstChild(declaration);
       XMLElement *root = docNew->NewElement("results");
-      docNew->InsertEndChild(root);
-     
+      docNew->InsertEndChild(root);     
       vector<account> newAccount = p.createAccount(m);     
       
       for (int i = 0; i < newAccount.size(); i++) {
-
-        if (newAccount[i].account1 == 1) {
-	  
+        if (newAccount[i].account1 == 1) {  
 	  data.lock();
 	  int suc = dataBase.createAccount(stod(newAccount[i].balance), newAccount[i].account_id, C);
 	  data.unlock();
@@ -96,9 +113,9 @@ void responseClient(int client_connection_fd)
         } else if (newAccount[i].position == 1) {
           int m1 = stoi(newAccount[i].shares);
 
-	  data.lock();
+	   data.lock();
 	  int suc = dataBase.createPosition(newAccount[i].account_id,newAccount[i].symbol, m1, C);
-	  data.unlock();
+	   data.unlock();
           if (suc == -1) {
             XMLElement *type = docNew->NewElement("error");
             type->SetText("Account does not exists");
@@ -124,7 +141,7 @@ void responseClient(int client_connection_fd)
     } else if (top == "transactions") {
       XMLDocument *doc = new XMLDocument();
       doc->Parse(m);
-      XMLElement *rootElement = doc->RootElement(); // get transaction
+      XMLElement *rootElement = doc->RootElement(); 
       string account_id = rootElement->Attribute("id");
       XMLDocument *docNew = new XMLDocument();
       XMLDeclaration *declaration = docNew->NewDeclaration();
@@ -145,7 +162,7 @@ void responseClient(int client_connection_fd)
           int transId = 0;
 	  data.lock();
           transId = dataBase.createOpen(account_id, stod(limit), stoi(amount),symbol, type, C);
-          data.unlock();
+	  data.unlock();
 	  
           if (transId == -2) {
             ordr = docNew->NewElement("error");
@@ -261,13 +278,15 @@ void responseClient(int client_connection_fd)
       XMLPrinter printer;
       docNew->Print(&printer);
       res = printer.CStr();
-    } else {
+      } else {
       cerr << "top level" << endl;
-    }
-    const char *mess = res.c_str();
-    C->disconnect();
-    send(client_connection_fd, mess, strlen(mess), 0);
-    }
+     }
+     const char *mess = res.c_str();
+     C->disconnect();
+     cout<<mess<<endl;
+     send(client_connection_fd, mess, strlen(mess), 0);
+     }*/
+ 
  }
 
 int main(int argc, char *argv[]) {
@@ -324,7 +343,7 @@ int main(int argc, char *argv[]) {
   dataBase.dropTable(C, "EXECUTED_TB");
   dataBase.dropTable(C, "CANCEL_TB");
   dataBase.createTable(C, "createTable.sql");
-  C->disconnect();
+   C->disconnect();
    while (1) {
     struct sockaddr_storage socket_addr;
     socklen_t socket_addr_len = sizeof(socket_addr);
@@ -335,10 +354,13 @@ int main(int argc, char *argv[]) {
       cerr << "Error: cannot accept connection on socket" << endl;
       return -1;
     }   
-    // cout<<client_connection_fd<<endl;
-    // thread t1(&responseClient,client_connection_fd);
-    // t1.detach();
-    responseClient(client_connection_fd);
+    try{
+     thread t1(&responseClient,client_connection_fd);
+     t1.detach();
+    }catch(exception & e)
+      {
+	cout<<e.what() <<endl;
+      }
    }
   freeaddrinfo(host_info_list);
   close(socket_fd);

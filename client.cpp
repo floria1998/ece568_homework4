@@ -34,16 +34,16 @@ string create()
   type->SetAttribute("id",id1.c_str());
   type->SetAttribute("balance","1000");
   root->InsertEndChild(type);
-  XMLElement * root2 = doc.NewElement("symbol");
-  int which = rand()%10;
-  root2->SetAttribute("sym",m[which].c_str());
-  XMLElement * root3 = doc.NewElement("account");
-  int id2 = rand()%100000;
-  string id3 = to_string(id2);
-  root3->SetAttribute("id",id3.c_str());
-  root3->SetText(id3.c_str());
-  root2->InsertEndChild(root3);
-  root->InsertEndChild(root2);
+  //XMLElement * root2 = doc.NewElement("symbol");
+  // int which = rand()%10;
+  // root2->SetAttribute("sym",m[which].c_str());
+  // XMLElement * root3 = doc.NewElement("account");
+  //int id2 = rand()%100000;
+  // string id3 = to_string(id2);
+  //  root3->SetAttribute("id",id3.c_str());
+  //root3->SetText(id3.c_str());
+  // root2->InsertEndChild(root3);
+  // root->InsertEndChild(root2);
   XMLPrinter printer;
   doc.Print(&printer);
   buf = printer.CStr();
@@ -94,7 +94,6 @@ string transactions()
   string final ="";
   final = final+to_string(buf.length())+"\n"+buf;
   return final;
-  // return buf;
 }
 
 void sendReq(long i,long h)
@@ -139,7 +138,8 @@ void sendReq(long i,long h)
     return;
   }
 
- 
+ for (int i = 0;i<1000;i++)
+ {
   srand((unsigned)time(NULL));
   string sendString;
   long m = rand()%h;
@@ -151,19 +151,30 @@ void sendReq(long i,long h)
    {
       sendString = transactions();
    }
-
-   const char * message = sendString.c_str();
-    cout<<message<<endl;
-
-  send(socket_fd, message, strlen(message)+1, 0);
   
-  char buf[65535];
-   recv(socket_fd, &buf, sizeof(buf), 0);
+   const char * message = sendString.c_str();
 
-  // cout << buf << endl;
+     send(socket_fd, message, strlen(message)+1, 0);   
+  }
 
+ int recv1 = 1;   
+ /* while (1)
+   {
+     char buf[65535]={0}; 
+    int recv1 =  recv(socket_fd, buf, sizeof(buf), 0);
+    if (recv1<=3)
+      {
+	break;
+      }
+    //	cout<<buf<<endl;
+   }
+ // char buf[65535]; 
+  recv(socket_fd, &buf, sizeof(buf), 0);
+  cout<<buf<<endl;*/
+  
+  
     freeaddrinfo(host_info_list);
-   close(socket_fd);
+    close(socket_fd);
 
   
 }
@@ -180,12 +191,12 @@ int main(int argc, char *argv[])
   cout<<"begin"<<endl;
   vector<thread> threads;
 
-  for (long i = 0;i<h;i++)
-    {
+  //  for (long i = 0;i<h;i++)
+  // {
       
-      sendReq(i,h);
-    }
-  /*
+      sendReq(1,h);
+      //  }
+      /*
   try{
     for (long i = 0;i<h;i++)
       {
