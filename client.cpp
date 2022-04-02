@@ -138,7 +138,7 @@ void sendReq(long i,long h)
     return;
   }
 
- for (int i = 0;i<1000;i++)
+ for (int i = 0;i<50000;i++)
  {
   srand((unsigned)time(NULL));
   string sendString;

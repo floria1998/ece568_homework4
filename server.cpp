@@ -66,16 +66,16 @@ void responseClient(int client_connection_fd)
   // cout<<"A"<<endl;
   // cout<<"running on thread:" <<gettid()<<endl;
    vector<string> ans = receiveInfo(client_connection_fd);
-   /* int res_length = 0;
-      string totalRequest="";*/
-   for (int i = 0;i<ans.size();i++)
-{
-  cout<<i<<endl;
-  cout<<ans[i]<<endl;
-}/*
+   int res_length = 0;
+      string totalRequest="";
+      // for (int i = 0;i<ans.size();i++)
+      //{
+  //  cout<<i<<endl;
+  // cout<<ans[i]<<endl;
+      //}
   for (int i = 0;i<ans.size();i++)
   {
-    //cout<<i<<endl;
+    cout<<i<<endl;
     parser p;
     string m1 = ans[i];
     string x = m1.substr(m1.find("\n") + 1);
@@ -284,8 +284,8 @@ void responseClient(int client_connection_fd)
      const char *mess = res.c_str();
      C->disconnect();
      cout<<mess<<endl;
-     send(client_connection_fd, mess, strlen(mess), 0);
-     }*/
+     // send(client_connection_fd, mess, strlen(mess), 0);
+    }
  
  }
 
