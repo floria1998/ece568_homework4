@@ -12,7 +12,7 @@ using namespace pqxx;
 
 void database::openDatabase(connection **C) {
   try {
-    *C = new connection("dbname=postgresbase user=postgres password=passw0rd");
+    *C = new connection("dbname=postgres user=postgres password=passw0rd");
     if ((*C)->is_open()) {
       cout << "Opened database successfully: " << (*C)->dbname() << endl;
     } else {

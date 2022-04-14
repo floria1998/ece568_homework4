@@ -1,0 +1,16 @@
+<<<<<<< HEAD
+1
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="2">
+  <order sym="A" amount="-8" limit="50"/>
+</transactions>
+=======
+2
+<?xml version="1.0" encoding="UTF-8"?> 
+ <transactions id="2"> 
+ <order sym="A" amount="-8" limit="50"/> 
+ <order sym="B" amount="10" limit="100"/> 
+ <order sym="C" amount="-10" limit="20"/> <!--execute--> 
+ <query id="6"/> 
+</transactions> 
+>>>>>>> 185244d1071c4ff6fe96c89d7aebd19530694388

@@ -16,7 +16,7 @@
 #include <vector>
 
 mutex data;
-
+void sendBack(string m1,int client_connection_fd,connection *C,database dataBase);
 using namespace std;
 using namespace tinyxml2;
 vector<string> parseXml(int total,string totalRequest)
@@ -27,6 +27,7 @@ vector<string> parseXml(int total,string totalRequest)
   {
     int y = totalRequest.find("\n",x);    
     string number = totalRequest.substr(x,y);
+    //  cout<<number<<endl;
     string xml = totalRequest.substr(y,stoi(number)+2);
     res.push_back(xml);
     x = y;
@@ -35,49 +36,54 @@ vector<string> parseXml(int total,string totalRequest)
   return res;
 }
   
-vector<string> receiveInfo(int client_connection_fd)  
-{
-   int total = 0;
-   vector<string> ans;
-   int res_length = 0;
-   string totalRequest="";
-    while(1)
-    {
-      char msg[65536]={0};
-      res_length = recv(client_connection_fd,msg,sizeof(msg),0);
-      if (res_length<=3)
-      {
-	 break;
-      }
-     string msg_str(msg,res_length);
-     totalRequest.append(msg_str);
-     total+=res_length;   
-   }
-
-   ans = parseXml(total,totalRequest);
-   return ans;
-}
 
 void responseClient(int client_connection_fd)
 {
   connection *C;
   database dataBase;
   dataBase.openDatabase(&C);
-  // cout<<"A"<<endl;
-  // cout<<"running on thread:" <<gettid()<<endl;
-   vector<string> ans = receiveInfo(client_connection_fd);
+  // receiveInfo(client_connection_fd,C);
+    int total = 0;
+   // vector<string> ans;
    int res_length = 0;
-      string totalRequest="";
-      // for (int i = 0;i<ans.size();i++)
-      //{
-  //  cout<<i<<endl;
-  // cout<<ans[i]<<endl;
-      //}
-  for (int i = 0;i<ans.size();i++)
-  {
-    cout<<i<<endl;
+   string totalRequest="";
+    while(1)
+    {
+      char msg[65536]={0};
+      res_length = recv(client_connection_fd,msg,sizeof(msg),0);
+      
+      if (res_length<=0)
+      {
+	 break;
+      }
+
+    
+     string msg_str(msg,res_length);
+     sendBack(msg_str,client_connection_fd,C,dataBase);
+     totalRequest.append(msg_str);
+     total+=res_length;   
+   }
+    //  cout<<"a"<<endl;
+    // ans = parseXml(total,totalRequest);
+    // cout<<"b"<<endl;
+    // return ans;
+  /* for (int i = 0;i<ans.size();i++)
+    {
+      cout<<ans[i]<<endl;
+      }*/
+  // cout<<"c"<<endl;
+  // int res_length = 0;
+  // string totalRequest="";
+  // cout<<ans.size()<<endl;
+  //for (int i = 0;i<ans.size();i++)
+  // {
+    //      cout<<i<<endl;
+}
+
+void sendBack(string m1,int client_connection_fd,connection * C,database dataBase) 
+{
     parser p;
-    string m1 = ans[i];
+// string m1 = ans[i];
     string x = m1.substr(m1.find("\n") + 1);
     const char *m = x.c_str();
     string top = p.parsexmlTop(m); 
@@ -281,13 +287,13 @@ void responseClient(int client_connection_fd)
       } else {
       cerr << "top level" << endl;
      }
+    
      const char *mess = res.c_str();
      C->disconnect();
      cout<<mess<<endl;
-     // send(client_connection_fd, mess, strlen(mess), 0);
+     send(client_connection_fd, mess, strlen(mess), 0);
     }
  
- }
 
 int main(int argc, char *argv[]) {
   int status;
